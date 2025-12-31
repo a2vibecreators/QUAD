@@ -42,11 +42,14 @@ npm run build
 ## Deployment
 
 ```bash
-# Deploy to DEV (dev.quadframe.work)
+# Deploy to DEV (dev.quadframe.work) - Mac Studio
 ./deploy-studio.sh dev
 
-# Deploy to PROD (quadframe.work)
-./deploy-studio.sh prod
+# Deploy to QA (qa.quadframe.work) - Mac Studio
+./deploy-studio.sh qa
+
+# Deploy to PROD (quadframe.work) - GCP Cloud Run
+./deploy-gcp.sh
 
 # Deploy to both
 ./deploy-studio.sh all
