@@ -6,20 +6,25 @@ import { useState } from "react";
 
 // Define all pages in order for prev/next navigation
 const pages = [
-  { href: "/", title: "Home", icon: "🏠", short: "Home" },
-  { href: "/pitch", title: "Value Proposition", icon: "💰", short: "Pitch" },
-  { href: "/flow", title: "Source of Truth Flow", icon: "🔄", short: "Flow" },
-  { href: "/concept", title: "Main Concept", icon: "💡", short: "Concept" },
-  { href: "/architecture", title: "Agent Architecture", icon: "🏗️", short: "Arch" },
-  { href: "/details", title: "Technical Details", icon: "📋", short: "Details" },
-  { href: "/jargons", title: "Terminology", icon: "📖", short: "Terms" },
-  { href: "/summary", title: "Executive Summary", icon: "📝", short: "Summary" },
-  { href: "/case-study", title: "Case Study", icon: "🧮", short: "Case" },
-  { href: "/demo", title: "Dashboard Demo", icon: "🌐", short: "Demo" },
-  { href: "/configure", title: "Configure QUAD", icon: "⚙️", short: "Config" },
-  { href: "/platform", title: "QUAD Platform", icon: "🏢", short: "Platform" },
-  { href: "/docs", title: "Documentation", icon: "📚", short: "Docs" },
+  { href: "/", title: "QUAD Home", icon: "◇", short: "QUAD", section: "brand" },
+  { href: "/pitch", title: "Value Proposition", icon: "💰", short: "Pitch", section: "explore" },
+  { href: "/flow", title: "Source of Truth Flow", icon: "🔄", short: "Flow", section: "explore" },
+  { href: "/concept", title: "Main Concept", icon: "💡", short: "Concept", section: "explore" },
+  { href: "/architecture", title: "Agent Architecture", icon: "🏗️", short: "Arch", section: "explore" },
+  { href: "/details", title: "Technical Details", icon: "📋", short: "Details", section: "explore" },
+  { href: "/jargons", title: "Terminology", icon: "📖", short: "Terms", section: "explore" },
+  { href: "/summary", title: "Executive Summary", icon: "📝", short: "Summary", section: "explore" },
+  { href: "/case-study", title: "Case Study", icon: "🧮", short: "Case", section: "try" },
+  { href: "/demo", title: "Dashboard Demo", icon: "🌐", short: "Demo", section: "try" },
+  { href: "/configure", title: "Configure QUAD", icon: "⚙️", short: "Config", section: "try" },
+  { href: "/platform", title: "QUAD Platform", icon: "🏢", short: "Platform", section: "try" },
+  { href: "/docs", title: "Documentation", icon: "📚", short: "Docs", section: "resources" },
 ];
+
+// Group pages by section
+const explorePages = pages.filter(p => p.section === "explore");
+const tryPages = pages.filter(p => p.section === "try");
+const resourcePages = pages.filter(p => p.section === "resources");
 
 interface PageNavigationProps {
   sections?: { id: string; title: string }[];
@@ -55,18 +60,64 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
               href="/"
               className="flex items-center gap-2 text-white hover:text-blue-300 transition-colors font-bold"
             >
-              <span className="text-xl">🏠</span>
+              <span className="text-xl font-bold text-blue-400">◇</span>
+              <span className="text-sm font-bold hidden sm:inline">QUAD</span>
             </Link>
 
-            {/* Desktop Menu - All Pages */}
-            <div className="hidden lg:flex items-center gap-1">
-              {pages.slice(1).map((page) => (
+            {/* Desktop Menu - Grouped Sections */}
+            <div className="hidden lg:flex items-center gap-4">
+              {/* Explore QUAD Section */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500 mr-1">Explore:</span>
+                {explorePages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                      pathname === page.href
+                        ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <span className="mr-1">{page.icon}</span>
+                    {page.short}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <span className="text-slate-700">|</span>
+
+              {/* Try QUAD Section */}
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-slate-500 mr-1">Try:</span>
+                {tryPages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                      pathname === page.href
+                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <span className="mr-1">{page.icon}</span>
+                    {page.short}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <span className="text-slate-700">|</span>
+
+              {/* Resources Section */}
+              {resourcePages.map((page) => (
                 <Link
                   key={page.href}
                   href={page.href}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
                     pathname === page.href
-                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                       : "text-slate-400 hover:text-white hover:bg-slate-800/50"
                   }`}
                 >
@@ -126,23 +177,85 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
 
         {/* Mobile Menu Dropdown */}
         {menuOpen && (
-          <div className="md:hidden border-t border-slate-700/50 bg-slate-900/98">
-            <div className="grid grid-cols-3 gap-1 p-2">
-              {pages.map((page) => (
-                <Link
-                  key={page.href}
-                  href={page.href}
-                  onClick={() => setMenuOpen(false)}
-                  className={`p-3 rounded-lg text-center transition-all ${
-                    pathname === page.href
-                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                  }`}
-                >
-                  <div className="text-xl mb-1">{page.icon}</div>
-                  <div className="text-xs truncate">{page.short}</div>
-                </Link>
-              ))}
+          <div className="md:hidden border-t border-slate-700/50 bg-slate-900/98 p-3">
+            {/* Home */}
+            <Link
+              href="/"
+              onClick={() => setMenuOpen(false)}
+              className={`block p-3 rounded-lg text-center mb-3 ${
+                pathname === "/"
+                  ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                  : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+              }`}
+            >
+              <span className="text-xl font-bold text-blue-400">◇</span>
+              <span className="ml-2 font-bold">QUAD Home</span>
+            </Link>
+
+            {/* Explore Section */}
+            <div className="mb-3">
+              <div className="text-xs text-slate-500 px-2 mb-2 font-semibold">EXPLORE QUAD</div>
+              <div className="grid grid-cols-4 gap-1">
+                {explorePages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`p-2 rounded-lg text-center transition-all ${
+                      pathname === page.href
+                        ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{page.icon}</div>
+                    <div className="text-[10px] truncate">{page.short}</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Try Section */}
+            <div className="mb-3">
+              <div className="text-xs text-slate-500 px-2 mb-2 font-semibold">TRY QUAD</div>
+              <div className="grid grid-cols-4 gap-1">
+                {tryPages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`p-2 rounded-lg text-center transition-all ${
+                      pathname === page.href
+                        ? "bg-green-500/20 text-green-300 border border-green-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{page.icon}</div>
+                    <div className="text-[10px] truncate">{page.short}</div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Resources Section */}
+            <div>
+              <div className="text-xs text-slate-500 px-2 mb-2 font-semibold">RESOURCES</div>
+              <div className="grid grid-cols-4 gap-1">
+                {resourcePages.map((page) => (
+                  <Link
+                    key={page.href}
+                    href={page.href}
+                    onClick={() => setMenuOpen(false)}
+                    className={`p-2 rounded-lg text-center transition-all ${
+                      pathname === page.href
+                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <div className="text-lg mb-1">{page.icon}</div>
+                    <div className="text-[10px] truncate">{page.short}</div>
+                  </Link>
+                ))}
+              </div>
             </div>
           </div>
         )}
