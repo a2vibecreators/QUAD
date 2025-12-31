@@ -1,6 +1,7 @@
 "use client";
 
 import PageNavigation from "@/components/PageNavigation";
+import TermWithLens from "@/components/TermWithLens";
 
 export default function QUADDetails() {
   const sections = [
@@ -76,13 +77,15 @@ export default function QUADDetails() {
             <h3 className="font-bold text-white mb-4 text-center">B/T Ratios by Circle</h3>
             <div className="space-y-4">
               {[
-                { circle: "Management", b: 80, t: 20, color: "blue", desc: "Heavy business focus - requirements, stakeholders, planning" },
-                { circle: "Development", b: 30, t: 70, color: "green", desc: "Mostly technical - coding, but understanding business context" },
-                { circle: "QA", b: 30, t: 70, color: "yellow", desc: "Technical testing, but understanding business acceptance" },
-                { circle: "Infrastructure", b: 20, t: 80, color: "purple", desc: "Highly technical - DevOps, cloud, databases" },
+                { circle: "Management", circleNum: 1, b: 80, t: 20, color: "blue", desc: "Heavy business focus - requirements, stakeholders, planning" },
+                { circle: "Development", circleNum: 2, b: 30, t: 70, color: "green", desc: "Mostly technical - coding, but understanding business context" },
+                { circle: "QA", circleNum: 3, b: 30, t: 70, color: "yellow", desc: "Technical testing, but understanding business acceptance" },
+                { circle: "Infrastructure", circleNum: 4, b: 20, t: 80, color: "purple", desc: "Highly technical - DevOps, cloud, databases" },
               ].map((item) => (
                 <div key={item.circle} className="flex items-center gap-4">
-                  <div className={`w-24 text-sm font-bold text-${item.color}-300`}>{item.circle}</div>
+                  <div className={`w-24 text-sm font-bold text-${item.color}-300`}>
+                    <TermWithLens term={`Circle ${item.circleNum}`}>{item.circle}</TermWithLens>
+                  </div>
                   <div className="flex-1">
                     <div className="flex h-6 rounded-full overflow-hidden">
                       <div className="bg-blue-500/50 flex items-center justify-center text-xs text-white font-medium" style={{ width: `${item.b}%` }}>
@@ -111,13 +114,15 @@ export default function QUADDetails() {
             <div className="h-4 bg-gradient-to-r from-blue-500 to-green-500 rounded-full mb-4"></div>
             <div className="grid grid-cols-4 gap-4 text-center text-sm">
               {[
-                { name: "Management", mode: "Dedicated", desc: "per project", color: "blue" },
-                { name: "Development", mode: "Mostly Dedicated", desc: "can share", color: "green" },
-                { name: "QA", mode: "Mostly Shared", desc: "across projects", color: "yellow" },
-                { name: "Infrastructure", mode: "Always Shared", desc: "across directors", color: "purple" },
+                { name: "Management", circleNum: 1, mode: "Dedicated", desc: "per project", color: "blue" },
+                { name: "Development", circleNum: 2, mode: "Mostly Dedicated", desc: "can share", color: "green" },
+                { name: "QA", circleNum: 3, mode: "Mostly Shared", desc: "across projects", color: "yellow" },
+                { name: "Infrastructure", circleNum: 4, mode: "Always Shared", desc: "across directors", color: "purple" },
               ].map((circle) => (
                 <div key={circle.name} className={`bg-${circle.color}-500/10 rounded-lg p-3 border border-${circle.color}-500/20`}>
-                  <div className="font-bold text-white">{circle.name}</div>
+                  <div className="font-bold text-white">
+                    <TermWithLens term={`Circle ${circle.circleNum}`}>{circle.name}</TermWithLens>
+                  </div>
                   <div className="text-xs text-slate-500">Circle</div>
                   <div className={`text-${circle.color}-300 text-xs mt-2 font-medium`}>{circle.mode}</div>
                   <div className="text-xs text-slate-500">{circle.desc}</div>
@@ -156,11 +161,15 @@ export default function QUADDetails() {
               <div className="text-center text-xs text-slate-500 mb-3">SHARED RESOURCES</div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
-                  <div className="text-sm font-bold text-purple-300">Infrastructure Circle</div>
+                  <div className="text-sm font-bold text-purple-300">
+                    <TermWithLens term="Circle 4">Infrastructure</TermWithLens> Circle
+                  </div>
                   <div className="text-xs text-slate-500">ALWAYS SHARED</div>
                 </div>
                 <div className="bg-yellow-500/10 rounded-lg p-3 border border-yellow-500/20">
-                  <div className="text-sm font-bold text-yellow-300">QA Circle</div>
+                  <div className="text-sm font-bold text-yellow-300">
+                    <TermWithLens term="Circle 3">QA</TermWithLens> Circle
+                  </div>
                   <div className="text-xs text-slate-500">USUALLY SHARED</div>
                 </div>
                 <div className="bg-slate-500/10 rounded-lg p-3 border border-slate-500/20">

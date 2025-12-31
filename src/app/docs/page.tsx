@@ -15,6 +15,10 @@ const docs = [
       { slug: "QUAD_SUMMARY", title: "Executive Summary", desc: "High-level overview for executives", icon: "📝" },
       { slug: "QUAD_CASE_STUDY", title: "Case Study", desc: "Calculator app: Agile vs QUAD", icon: "🧮" },
       { slug: "QUAD_AGENT_ARCHITECTURE", title: "Agent Architecture", desc: "QACA - Agent communication spec", icon: "🏗️" },
+      { slug: "QUAD_DISCOVERY", title: "Discovery Framework", desc: "Diagnostic process for confused clients", icon: "🔍", badge: "NEW" },
+      { slug: "QUAD_PITCH", title: "Value Proposition", desc: "ROI calculator and benefits analysis", icon: "💰" },
+      { slug: "QUAD_FLOW", title: "Source of Truth Flow", desc: "How requirements flow through QUAD", icon: "🔄" },
+      { slug: "QUAD_ONBOARDING", title: "Onboarding Requirements", desc: "Prerequisites and setup checklist", icon: "🎯" },
     ],
   },
   {

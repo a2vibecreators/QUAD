@@ -1,8 +1,12 @@
 "use client";
 
 import PageNavigation from "@/components/PageNavigation";
+import TermWithLens from "@/components/TermWithLens";
+import { useMethodology } from "@/context/MethodologyContext";
+import { TERM_MAPPINGS } from "@/components/TermWithLens";
 
 export default function QUADJargons() {
+  const { methodology, methodologyInfo } = useMethodology();
   const sections = [
     { id: "quick-ref", title: "Quick Reference" },
     { id: "glossary", title: "Full Glossary" },
@@ -11,21 +15,30 @@ export default function QUADJargons() {
     { id: "estimation", title: "Estimation" },
   ];
 
+  // Generate glossary based on selected methodology
+  const getEquivalent = (quadTerm: string) => {
+    const mapping = TERM_MAPPINGS[quadTerm];
+    if (!mapping || methodology === "none") return "N/A";
+    return mapping[methodology] || "N/A";
+  };
+
   const glossary = [
-    { old: "Sprint", quad: "Cycle", meaning: "4-week period of continuous work" },
-    { old: "Daily Standup", quad: "Pulse", meaning: "Optional weekly sync (5-15 min)" },
-    { old: "Sprint Planning", quad: "Trajectory", meaning: "Setting priorities for the cycle" },
-    { old: "Sprint Review", quad: "Checkpoint", meaning: "Monthly demo + release decision" },
-    { old: "Retrospective", quad: "Calibration", meaning: "Monthly reflection + improvement" },
-    { old: "Backlog", quad: "Horizon", meaning: "Work ahead, prioritized queue" },
-    { old: "Backlog Grooming", quad: "Refinement", meaning: "Breaking down and clarifying work" },
-    { old: "Sprint Backlog", quad: "Cycle Queue", meaning: "Work selected for current cycle" },
-    { old: "Story Points", quad: "Complexity", meaning: "Estimation using chosen method" },
-    { old: "Velocity", quad: "Flow Rate", meaning: "Speed of work through pipeline" },
-    { old: "Burndown", quad: "Progression", meaning: "Visual of work remaining" },
-    { old: "Definition of Done", quad: "Completion Criteria", meaning: "When work is truly done" },
-    { old: "Scrum Master", quad: "Scheduling Agent", meaning: "AI handles coordination" },
-    { old: "Product Owner", quad: "Circle Lead", meaning: "BA/PM/TL in Management Circle" },
+    { quad: "Cycle", meaning: "4-week period of continuous work" },
+    { quad: "Pulse", meaning: "Optional weekly sync (5-15 min)" },
+    { quad: "Trajectory", meaning: "Setting priorities for the cycle" },
+    { quad: "Checkpoint", meaning: "Monthly demo + release decision" },
+    { quad: "Calibration", meaning: "Monthly reflection + improvement" },
+    { quad: "Horizon", meaning: "Work ahead, prioritized queue" },
+    { quad: "Refinement", meaning: "Breaking down and clarifying work" },
+    { quad: "Cycle Queue", meaning: "Work selected for current cycle" },
+    { quad: "Complexity", meaning: "Estimation using chosen method" },
+    { quad: "Flow Rate", meaning: "Speed of work through pipeline" },
+    { quad: "Progression", meaning: "Visual of work remaining" },
+    { quad: "Completion Criteria", meaning: "When work is truly done" },
+    { quad: "Circle 1", meaning: "Management circle (BA/PM/TL)" },
+    { quad: "Circle 2", meaning: "Development circle" },
+    { quad: "Circle 3", meaning: "QA circle" },
+    { quad: "Circle 4", meaning: "Infrastructure circle" },
   ];
 
   const events = [
@@ -56,23 +69,25 @@ export default function QUADJargons() {
             <h2 className="text-xl font-bold mb-4 text-center">Quick Reference Card</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
               {[
-                { term: "CYCLE", def: "4-week period of continuous work" },
-                { term: "PULSE", def: "Optional weekly sync (5-15 min)" },
-                { term: "TRAJECTORY", def: "Setting priorities for the cycle" },
-                { term: "CHECKPOINT", def: "Monthly demo + release decision" },
-                { term: "CALIBRATION", def: "Monthly reflection + improvement" },
-                { term: "HORIZON", def: "Work backlog (what's ahead)" },
-                { term: "REFINEMENT", def: "Breaking down and clarifying work" },
-                { term: "CYCLE QUEUE", def: "Work selected for current cycle" },
-                { term: "FLOW RATE", def: "Speed of work through pipeline" },
-                { term: "PROGRESSION", def: "Visual of work remaining" },
-                { term: "OPERATORS", def: "Human specialists who execute circle functions" },
-                { term: "CIRCLES", def: "4 functional teams (Mgmt, Dev, QA, Infra)" },
-                { term: "AGENTS", def: "AI helpers assigned to each circle" },
-                { term: "ENABLING TEAMS", def: "Optional support groups (Arch, Security, etc.)" },
+                { term: "Cycle", def: "4-week period of continuous work" },
+                { term: "Pulse", def: "Optional weekly sync (5-15 min)" },
+                { term: "Trajectory", def: "Setting priorities for the cycle" },
+                { term: "Checkpoint", def: "Monthly demo + release decision" },
+                { term: "Calibration", def: "Monthly reflection + improvement" },
+                { term: "Horizon", def: "Work backlog (what's ahead)" },
+                { term: "Refinement", def: "Breaking down and clarifying work" },
+                { term: "Cycle Queue", def: "Work selected for current cycle" },
+                { term: "Flow Rate", def: "Speed of work through pipeline" },
+                { term: "Progression", def: "Visual of work remaining" },
+                { term: "Operators", def: "Human specialists who execute circle functions" },
+                { term: "Circles", def: "4 functional teams (Mgmt, Dev, QA, Infra)" },
+                { term: "Agents", def: "AI helpers assigned to each circle" },
+                { term: "Enabling Teams", def: "Optional support groups (Arch, Security, etc.)" },
               ].map((item) => (
                 <div key={item.term} className="bg-slate-800/50 rounded-lg p-3">
-                  <div className="font-bold text-blue-300">{item.term}</div>
+                  <div className="font-bold text-blue-300">
+                    <TermWithLens term={item.term}>{item.term.toUpperCase()}</TermWithLens>
+                  </div>
                   <div className="text-xs text-slate-400">{item.def}</div>
                 </div>
               ))}
@@ -81,32 +96,42 @@ export default function QUADJargons() {
         </section>
 
         {/* Full Glossary Table */}
-        <section className="mb-12">
+        <section id="glossary" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Terminology Mapping</h2>
+          <p className="text-sm text-slate-400 mb-4">
+            Your background: <span className="text-white font-semibold">{methodologyInfo.name}</span> {methodologyInfo.icon}
+          </p>
           <div className="bg-slate-800/30 rounded-xl border border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-slate-800/50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-slate-400">Old Term (Scrum)</th>
                   <th className="px-4 py-3 text-left text-blue-300">QUAD Term</th>
+                  <th className="px-4 py-3 text-left text-slate-400">
+                    {methodology === "none" ? "Equivalent" : `${methodologyInfo.name} Equivalent`}
+                  </th>
                   <th className="px-4 py-3 text-left text-slate-400">Meaning</th>
                 </tr>
               </thead>
               <tbody>
-                {glossary.map((item, i) => (
-                  <tr key={item.quad} className={i % 2 === 0 ? "bg-slate-800/20" : ""}>
-                    <td className="px-4 py-3 text-slate-500 line-through">{item.old}</td>
-                    <td className="px-4 py-3 font-semibold text-white">{item.quad}</td>
-                    <td className="px-4 py-3 text-slate-400">{item.meaning}</td>
-                  </tr>
-                ))}
+                {glossary.map((item, i) => {
+                  const equivalent = getEquivalent(item.quad);
+                  return (
+                    <tr key={item.quad} className={i % 2 === 0 ? "bg-slate-800/20" : ""}>
+                      <td className="px-4 py-3 font-semibold text-white">{item.quad}</td>
+                      <td className="px-4 py-3 text-blue-300">
+                        {equivalent !== "N/A" ? equivalent : <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-400">{item.meaning}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </section>
 
         {/* The 4 Circles */}
-        <section className="mb-12">
+        <section id="circles" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">The 4 Circles</h2>
           <div className="grid grid-cols-2 gap-4">
             {[
@@ -120,7 +145,9 @@ export default function QUADJargons() {
                   <div className={`w-8 h-8 rounded-full bg-${c.color}-500/20 flex items-center justify-center text-${c.color}-300 font-bold text-sm`}>
                     {c.num}
                   </div>
-                  <div className="font-bold text-white">{c.name} Circle</div>
+                  <div className="font-bold text-white">
+                    <TermWithLens term={`Circle ${c.num}`}>{c.name}</TermWithLens> Circle
+                  </div>
                 </div>
                 <div className="text-xs text-slate-500">{c.ratio}</div>
                 <div className={`text-xs text-${c.color}-300 font-medium`}>{c.mode}</div>
@@ -134,13 +161,17 @@ export default function QUADJargons() {
         </section>
 
         {/* Cycle Events */}
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold mb-6 text-blue-300">Cycle Events</h2>
+        <section id="events" className="mb-12 scroll-mt-32">
+          <h2 className="text-2xl font-bold mb-6 text-blue-300">
+            <TermWithLens term="Cycle">Cycle</TermWithLens> Events
+          </h2>
           <div className="space-y-4">
             {events.map((event) => (
               <div key={event.name} className="bg-slate-700/30 rounded-xl p-4 border border-slate-600/50 flex items-center justify-between">
                 <div>
-                  <h3 className="font-bold text-white">{event.name}</h3>
+                  <h3 className="font-bold text-white">
+                    <TermWithLens term={event.name}>{event.name}</TermWithLens>
+                  </h3>
                   <p className="text-sm text-slate-400">{event.purpose}</p>
                 </div>
                 <div className="text-right">
@@ -153,7 +184,7 @@ export default function QUADJargons() {
         </section>
 
         {/* Estimation Methods */}
-        <section className="mb-12">
+        <section id="estimation" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Estimation Methods</h2>
           <p className="text-slate-400 mb-4">QUAD offers multiple estimation methods. Teams choose in settings:</p>
           <div className="grid md:grid-cols-2 gap-4">

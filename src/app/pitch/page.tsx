@@ -169,7 +169,7 @@ export default function QUADPitch() {
   const [companySize, setCompanySize] = useState<CompanySize>("medium");
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <PageNavigation />
       <div className="max-w-6xl mx-auto p-8">
         {/* Hero */}
@@ -280,7 +280,7 @@ export default function QUADPitch() {
 
         {/* ROI Calculator */}
         <div className="mb-12">
-          <ROICalculator companySize={companySize} />
+          <ROICalculator key={companySize} companySize={companySize} />
         </div>
 
         {/* How QUAD Works */}

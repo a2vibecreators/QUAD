@@ -1,6 +1,7 @@
 "use client";
 
 import PageNavigation from "@/components/PageNavigation";
+import TermWithLens from "@/components/TermWithLens";
 
 export default function QUADConcept() {
   const sections = [
@@ -123,6 +124,7 @@ export default function QUADConcept() {
           {[
             {
               name: "Management",
+              circleNum: 1,
               focus: "Business 80% / Technical 20%",
               resourceMode: "Dedicated",
               resourceDesc: "per project",
@@ -137,6 +139,7 @@ export default function QUADConcept() {
             },
             {
               name: "Development",
+              circleNum: 2,
               focus: "Business 30% / Technical 70%",
               resourceMode: "Mostly Dedicated",
               resourceDesc: "can be shared across small projects",
@@ -151,6 +154,7 @@ export default function QUADConcept() {
             },
             {
               name: "QA",
+              circleNum: 3,
               focus: "Business 30% / Technical 70%",
               resourceMode: "Mostly Shared",
               resourceDesc: "across projects within a director",
@@ -165,6 +169,7 @@ export default function QUADConcept() {
             },
             {
               name: "Infrastructure",
+              circleNum: 4,
               focus: "Business 20% / Technical 80%",
               resourceMode: "Always Shared",
               resourceDesc: "across all directors",
@@ -185,7 +190,9 @@ export default function QUADConcept() {
                     {idx + 1}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-white">{circle.name} Circle</h3>
+                    <h3 className="text-xl font-bold text-white">
+                      <TermWithLens term={`Circle ${circle.circleNum}`}>{circle.name}</TermWithLens> Circle
+                    </h3>
                     <p className="text-sm text-slate-400">{circle.focus}</p>
                   </div>
                 </div>
@@ -282,7 +289,9 @@ export default function QUADConcept() {
 
         {/* The QUAD Cycle */}
         <section id="cycle" className="mb-12 scroll-mt-32">
-          <h2 className="text-2xl font-bold mb-6 text-blue-300">The QUAD Cycle (4 Weeks)</h2>
+          <h2 className="text-2xl font-bold mb-6 text-blue-300">
+            The QUAD <TermWithLens term="Cycle">Cycle</TermWithLens> (4 Weeks)
+          </h2>
           <div className="grid grid-cols-4 gap-4">
             {[
               { week: 1, focus: "Trajectory", desc: "Set priorities, expand stories, start development", color: "blue" },
@@ -292,7 +301,9 @@ export default function QUADConcept() {
             ].map((w) => (
               <div key={w.week} className={`bg-${w.color}-500/10 rounded-xl p-4 border border-${w.color}-500/20 text-center`}>
                 <div className="text-2xl font-bold text-white mb-1">Week {w.week}</div>
-                <div className={`text-sm font-semibold text-${w.color}-300 mb-2`}>{w.focus}</div>
+                <div className={`text-sm font-semibold text-${w.color}-300 mb-2`}>
+                  <TermWithLens term={w.focus}>{w.focus}</TermWithLens>
+                </div>
                 <p className="text-xs text-slate-400">{w.desc}</p>
               </div>
             ))}
