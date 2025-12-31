@@ -64,11 +64,11 @@ export default function RootLayout({
                 <span className="text-xs text-slate-600">Circle of Functions</span>
               </div>
               <p className="text-sm text-slate-600">
-                Created by{" "}
+                A methodology by{" "}
                 <a href="mailto:suman.addanki@gmail.com" className="text-blue-400 hover:text-blue-300">
                   Suman Addanki
                 </a>
-                {" "}| December 2025
+                {" "}| First Published: December 2025
               </p>
             </div>
           </div>
