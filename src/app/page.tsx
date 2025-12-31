@@ -18,12 +18,48 @@ export default function Home() {
             Replace Agile ceremonies with AI agents and documentation-first practices.
           </p>
 
-          <div className="glass-card rounded-2xl p-8 max-w-3xl mx-auto mb-12">
-            <p className="text-lg font-semibold text-slate-300 mb-2">Circle of Functions</p>
-            <p className="text-3xl font-bold text-white mb-4">
-              1 Method · 2 Dimensions · 3 Axioms · 4 Circles
-            </p>
-            <p className="text-slate-400 max-w-xl mx-auto">
+          {/* Circle of Functions - Super Blocks */}
+          <div className="max-w-4xl mx-auto mb-12">
+            <p className="text-lg font-semibold text-slate-400 mb-6 tracking-widest uppercase">Circle of Functions</p>
+            <div className="grid grid-cols-4 gap-3 mb-8">
+              {/* Block 1 - Method */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all hover:scale-105 hover:-translate-y-1">
+                  <div className="text-5xl font-black bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent mb-2">1</div>
+                  <div className="text-xs font-bold text-blue-400 tracking-wider uppercase">Method</div>
+                  <div className="text-sm text-white font-semibold mt-2">QUAD</div>
+                </div>
+              </div>
+              {/* Block 2 - Dimensions */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-green-500/30 hover:border-green-400/50 transition-all hover:scale-105 hover:-translate-y-1">
+                  <div className="text-5xl font-black bg-gradient-to-br from-green-400 to-emerald-600 bg-clip-text text-transparent mb-2">2</div>
+                  <div className="text-xs font-bold text-green-400 tracking-wider uppercase">Dimensions</div>
+                  <div className="text-sm text-white font-semibold mt-2">Biz + Tech</div>
+                </div>
+              </div>
+              {/* Block 3 - Axioms */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-amber-500/30 hover:border-amber-400/50 transition-all hover:scale-105 hover:-translate-y-1">
+                  <div className="text-5xl font-black bg-gradient-to-br from-amber-400 to-orange-600 bg-clip-text text-transparent mb-2">3</div>
+                  <div className="text-xs font-bold text-amber-400 tracking-wider uppercase">Axioms</div>
+                  <div className="text-sm text-white font-semibold mt-2">Core Truths</div>
+                </div>
+              </div>
+              {/* Block 4 - Circles */}
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-violet-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-purple-500/30 hover:border-purple-400/50 transition-all hover:scale-105 hover:-translate-y-1">
+                  <div className="text-5xl font-black bg-gradient-to-br from-purple-400 to-violet-600 bg-clip-text text-transparent mb-2">4</div>
+                  <div className="text-xs font-bold text-purple-400 tracking-wider uppercase">Circles</div>
+                  <div className="text-sm text-white font-semibold mt-2">Teams</div>
+                </div>
+              </div>
+            </div>
+            <p className="text-slate-400 max-w-2xl mx-auto">
               QUAD combines four functional circles with AI agents at every step
               and a documentation-first approach. The result: faster delivery,
               consistent quality, and no knowledge silos.

@@ -5,8 +5,10 @@
 #
 # Usage:
 #   ./deploy-studio.sh dev   - Deploy to DEV (dev.quadframe.work)
-#   ./deploy-studio.sh prod  - Deploy to PROD (quadframe.work)
-#   ./deploy-studio.sh all   - Deploy to both
+#   ./deploy-studio.sh qa    - Deploy to QA (qa.quadframe.work)
+#   ./deploy-studio.sh all   - Deploy to both DEV and QA
+#
+# Note: PROD (quadframe.work) is deployed to GCP Cloud Run, not Mac Studio
 
 set -e
 
@@ -22,7 +24,7 @@ NETWORK_NAME="caddy-network"
 
 # Port assignments (similar to a2vibecreators-web pattern)
 DEV_PORT=18001
-PROD_PORT=19001
+QA_PORT=18501
 
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -110,29 +112,31 @@ case "${1}" in
         print_status "URL: https://dev.quadframe.work"
         print_status "Local: http://localhost:${DEV_PORT}"
         ;;
-    prod)
-        deploy_env "prod" ${PROD_PORT}
+    qa)
+        deploy_env "qa" ${QA_PORT}
         echo ""
-        print_status "PROD deployed successfully!"
-        print_status "URL: https://quadframe.work"
-        print_status "Local: http://localhost:${PROD_PORT}"
+        print_status "QA deployed successfully!"
+        print_status "URL: https://qa.quadframe.work"
+        print_status "Local: http://localhost:${QA_PORT}"
         ;;
     all)
         deploy_env "dev" ${DEV_PORT}
-        deploy_env "prod" ${PROD_PORT}
+        deploy_env "qa" ${QA_PORT}
         echo ""
         print_status "Both environments deployed successfully!"
         print_status "DEV: https://dev.quadframe.work (localhost:${DEV_PORT})"
-        print_status "PROD: https://quadframe.work (localhost:${PROD_PORT})"
+        print_status "QA: https://qa.quadframe.work (localhost:${QA_PORT})"
         ;;
     *)
         echo "QUAD Framework Deploy Script"
         echo ""
-        echo "Usage: $0 {dev|prod|all}"
+        echo "Usage: $0 {dev|qa|all}"
         echo ""
         echo "  dev  - Deploy to DEV (dev.quadframe.work)"
-        echo "  prod - Deploy to PROD (quadframe.work)"
-        echo "  all  - Deploy to both environments"
+        echo "  qa   - Deploy to QA (qa.quadframe.work)"
+        echo "  all  - Deploy to both DEV and QA"
+        echo ""
+        echo "Note: PROD (quadframe.work) is deployed to GCP Cloud Run"
         exit 1
         ;;
 esac
@@ -145,6 +149,6 @@ echo "  dev.quadframe.work {"
 echo "      reverse_proxy quadframework-dev:80"
 echo "  }"
 echo ""
-echo "  quadframe.work {"
-echo "      reverse_proxy quadframework-prod:80"
+echo "  qa.quadframe.work {"
+echo "      reverse_proxy quadframework-qa:80"
 echo "  }"
