@@ -7,88 +7,86 @@ export default function Home() {
       <PageNavigation />
 
       {/* Hero Section */}
-      <section className="relative py-20 px-8">
+      <section className="relative py-8 px-8">
         <div className="max-w-5xl mx-auto text-center">
-          <h1 className="text-7xl font-black tracking-tight mb-6">
+          <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-3">
             <span className="gradient-text">QUAD</span>
-            <span className="text-2xl align-super text-slate-500 ml-2">Framework</span>
+            <span className="text-xl align-super text-slate-500 ml-2">Framework</span>
           </h1>
-          <p className="text-2xl font-semibold text-blue-300 mb-2">
+          <p className="text-xl font-semibold text-blue-300 mb-1">
             Quick Unified Agentic Development
           </p>
-          <p className="text-lg text-slate-500 mb-6">
+          <p className="text-base text-slate-500 mb-4">
             <span className="text-blue-400">Q</span>uestion → <span className="text-green-400">U</span>nderstand → <span className="text-amber-400">A</span>llocate → <span className="text-purple-400">D</span>eliver
           </p>
 
           {/* 4-4-4 Principle Banner */}
-          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-6 mb-8 max-w-2xl mx-auto">
-            <p className="text-lg font-semibold text-emerald-300 mb-2">The 4-4-4 Principle</p>
-            <div className="flex justify-center gap-4 mb-3">
+          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-4 mb-6 max-w-2xl mx-auto">
+            <p className="text-base font-semibold text-emerald-300 mb-1">The 4-4-4 Principle</p>
+            <div className="flex justify-center gap-4 mb-2">
               <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4</div>
-                <div className="text-xs text-slate-400">hours/day</div>
+                <div className="text-2xl font-black text-emerald-400">4</div>
+                <div className="text-xs text-slate-400">hrs/day</div>
               </div>
-              <div className="text-2xl text-slate-600">×</div>
+              <div className="text-xl text-slate-600">×</div>
               <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4</div>
-                <div className="text-xs text-slate-400">days/week</div>
+                <div className="text-2xl font-black text-emerald-400">4</div>
+                <div className="text-xs text-slate-400">days/wk</div>
               </div>
-              <div className="text-2xl text-slate-600">=</div>
+              <div className="text-xl text-slate-600">=</div>
               <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4X</div>
+                <div className="text-2xl font-black text-emerald-400">4X</div>
                 <div className="text-xs text-slate-400">efficiency</div>
               </div>
             </div>
-            <p className="text-sm text-slate-400">
-              Work smarter, not longer. Achieve more while living more.
+            <p className="text-xs text-slate-400">
+              Work smarter, not longer.
             </p>
           </div>
 
           {/* Circle of Functions - Super Blocks */}
-          <div className="max-w-3xl mx-auto mb-12 px-4">
-            <p className="text-lg font-semibold text-slate-400 mb-8 tracking-widest uppercase">Circle of Functions</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
+          <div className="max-w-3xl mx-auto mb-8 px-4">
+            <p className="text-sm font-semibold text-slate-400 mb-4 tracking-widest uppercase">Circle of Functions</p>
+            <div className="grid grid-cols-4 gap-3 md:gap-4 mb-6">
               {/* Block 1 - Method */}
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 md:p-8 border border-blue-500/30 hover:border-blue-400/50 transition-all hover:scale-105 hover:-translate-y-1">
-                  <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent mb-2">1</div>
-                  <div className="text-xs font-bold text-blue-400 tracking-wider uppercase">Method</div>
-                  <div className="text-sm md:text-base text-white font-semibold mt-2">QUAD</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 md:p-5 border border-blue-500/30 hover:border-blue-400/50 transition-all hover:scale-105">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent mb-1">1</div>
+                  <div className="text-[10px] md:text-xs font-bold text-blue-400 tracking-wider uppercase">Method</div>
+                  <div className="text-xs md:text-sm text-white font-semibold mt-1">QUAD</div>
                 </div>
               </div>
               {/* Block 2 - Dimensions */}
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 md:p-8 border border-green-500/30 hover:border-green-400/50 transition-all hover:scale-105 hover:-translate-y-1">
-                  <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-green-400 to-emerald-600 bg-clip-text text-transparent mb-2">2</div>
-                  <div className="text-xs font-bold text-green-400 tracking-wider uppercase">Dimensions</div>
-                  <div className="text-sm md:text-base text-white font-semibold mt-2">Biz + Tech</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-700 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 md:p-5 border border-green-500/30 hover:border-green-400/50 transition-all hover:scale-105">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-br from-green-400 to-emerald-600 bg-clip-text text-transparent mb-1">2</div>
+                  <div className="text-[10px] md:text-xs font-bold text-green-400 tracking-wider uppercase">Dims</div>
+                  <div className="text-xs md:text-sm text-white font-semibold mt-1">Biz+Tech</div>
                 </div>
               </div>
               {/* Block 3 - Axioms */}
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 md:p-8 border border-amber-500/30 hover:border-amber-400/50 transition-all hover:scale-105 hover:-translate-y-1">
-                  <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-amber-400 to-orange-600 bg-clip-text text-transparent mb-2">3</div>
-                  <div className="text-xs font-bold text-amber-400 tracking-wider uppercase">Axioms</div>
-                  <div className="text-sm md:text-base text-white font-semibold mt-2">Core Truths</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-700 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 md:p-5 border border-amber-500/30 hover:border-amber-400/50 transition-all hover:scale-105">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-br from-amber-400 to-orange-600 bg-clip-text text-transparent mb-1">3</div>
+                  <div className="text-[10px] md:text-xs font-bold text-amber-400 tracking-wider uppercase">Axioms</div>
+                  <div className="text-xs md:text-sm text-white font-semibold mt-1">Truths</div>
                 </div>
               </div>
               {/* Block 4 - Circles */}
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-violet-700 rounded-2xl blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 md:p-8 border border-purple-500/30 hover:border-purple-400/50 transition-all hover:scale-105 hover:-translate-y-1">
-                  <div className="text-5xl md:text-6xl font-black bg-gradient-to-br from-purple-400 to-violet-600 bg-clip-text text-transparent mb-2">4</div>
-                  <div className="text-xs font-bold text-purple-400 tracking-wider uppercase">Circles</div>
-                  <div className="text-sm md:text-base text-white font-semibold mt-2">Teams</div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-violet-700 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-3 md:p-5 border border-purple-500/30 hover:border-purple-400/50 transition-all hover:scale-105">
+                  <div className="text-3xl md:text-4xl font-black bg-gradient-to-br from-purple-400 to-violet-600 bg-clip-text text-transparent mb-1">4</div>
+                  <div className="text-[10px] md:text-xs font-bold text-purple-400 tracking-wider uppercase">Circles</div>
+                  <div className="text-xs md:text-sm text-white font-semibold mt-1">Teams</div>
                 </div>
               </div>
             </div>
-            <p className="text-slate-400 max-w-2xl mx-auto text-center">
-              QUAD combines four functional circles with AI agents at every step
-              and a documentation-first approach. Track workloads, identify skill gaps,
-              and use the Adoption Matrix to measure your AI journey.
+            <p className="text-sm text-slate-400 max-w-xl mx-auto text-center">
+              AI agents at every step with documentation-first approach.
             </p>
           </div>
 
