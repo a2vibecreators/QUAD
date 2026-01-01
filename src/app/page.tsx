@@ -72,6 +72,186 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Revolutionary Development Model */}
+      <section className="py-20 px-8 bg-gradient-to-br from-blue-900/20 to-purple-900/20 border-y border-blue-500/20">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                The QUAD Revolution
+              </span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              From weeks of documentation to hours of working software
+            </p>
+          </div>
+
+          {/* Comparison Table */}
+          <div className="grid md:grid-cols-2 gap-8 mb-12">
+            {/* Traditional Agile */}
+            <div className="glass-card rounded-2xl p-8 border border-red-500/30">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">🐢</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Traditional Agile</h3>
+                  <p className="text-sm text-red-400">Waterfall in Disguise</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 mt-1">❌</span>
+                  <div>
+                    <p className="text-white font-medium">6-9 weeks to first prototype</p>
+                    <p className="text-sm text-slate-400">BA writes 40-page specs first</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 mt-1">❌</span>
+                  <div>
+                    <p className="text-white font-medium">2-4 week sprint cycles</p>
+                    <p className="text-sm text-slate-400">Slow feedback loops</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 mt-1">❌</span>
+                  <div>
+                    <p className="text-white font-medium">30-40% rework rate</p>
+                    <p className="text-sm text-slate-400">Build wrong features, waste time</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 mt-1">❌</span>
+                  <div>
+                    <p className="text-white font-medium">12-16 weeks to production</p>
+                    <p className="text-sm text-slate-400">Long deployment cycles</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-red-400 mt-1">❌</span>
+                  <div>
+                    <p className="text-white font-medium">$50K-$200K per feature</p>
+                    <p className="text-sm text-slate-400">High cost, low satisfaction</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QUAD Model */}
+            <div className="glass-card rounded-2xl p-8 border border-green-500/30 relative overflow-hidden">
+              <div className="absolute top-4 right-4">
+                <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-bold">
+                  100x FASTER
+                </span>
+              </div>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-2xl">🚀</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">QUAD Model</h3>
+                  <p className="text-sm text-green-400">AI-Accelerated Spiral</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 mt-1">✅</span>
+                  <div>
+                    <p className="text-white font-medium">2-8 hours to first prototype</p>
+                    <p className="text-sm text-slate-400">Minimal POC spec → AI builds</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 mt-1">✅</span>
+                  <div>
+                    <p className="text-white font-medium">Same-day iteration cycles</p>
+                    <p className="text-sm text-slate-400">3-5 iterations per day</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 mt-1">✅</span>
+                  <div>
+                    <p className="text-white font-medium">5-10% rework rate</p>
+                    <p className="text-sm text-slate-400">Rapid validation, minimal waste</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 mt-1">✅</span>
+                  <div>
+                    <p className="text-white font-medium">1-3 days to production</p>
+                    <p className="text-sm text-slate-400">Continuous deployment</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-green-400 mt-1">✅</span>
+                  <div>
+                    <p className="text-white font-medium">$2K-$10K per feature</p>
+                    <p className="text-sm text-slate-400">Low cost, high satisfaction (95%)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* How It Works */}
+          <div className="bg-slate-800/50 rounded-2xl p-8 border border-blue-500/20">
+            <h3 className="text-2xl font-bold text-center mb-8">How QUAD Works</h3>
+            <div className="grid md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">📝</span>
+                </div>
+                <h4 className="font-semibold text-white mb-2">1. Minimal POC</h4>
+                <p className="text-sm text-slate-400">
+                  BA writes 1-2 paragraph spec, not 40-page document
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">🤖</span>
+                </div>
+                <h4 className="font-semibold text-white mb-2">2. AI Builds</h4>
+                <p className="text-sm text-slate-400">
+                  QUAD agents develop & deploy to DEV in 2-8 hours
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">👀</span>
+                </div>
+                <h4 className="font-semibold text-white mb-2">3. Business Reviews</h4>
+                <p className="text-sm text-slate-400">
+                  See working software same day, provide feedback
+                </p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">🔄</span>
+                </div>
+                <h4 className="font-semibold text-white mb-2">4. Rapid Iteration</h4>
+                <p className="text-sm text-slate-400">
+                  AI updates based on feedback in hours, not weeks
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center mt-12">
+            <Link
+              href="/concept"
+              className="inline-block px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg"
+            >
+              Learn the QUAD Development Model →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* The 1-2-3-4 Hierarchy */}
       <section className="py-16 px-4 md:px-8 bg-slate-800/30">
         <div className="max-w-4xl mx-auto">

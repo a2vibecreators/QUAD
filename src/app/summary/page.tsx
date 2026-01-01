@@ -42,7 +42,7 @@ export default function QUADSummary() {
         </section>
 
         {/* Key Numbers */}
-        <section className="mb-12">
+        <section id="numbers" className="mb-12 scroll-mt-32">
           <h2 className="text-xl font-bold mb-6 text-center">Key Numbers</h2>
           <div className="grid grid-cols-4 gap-4">
             {[
@@ -61,7 +61,7 @@ export default function QUADSummary() {
         </section>
 
         {/* The 4 Circles - Simplified */}
-        <section className="mb-12">
+        <section id="circles" className="mb-12 scroll-mt-32">
           <h2 className="text-xl font-bold mb-6">The 4 Circles</h2>
           <div className="grid grid-cols-2 gap-4">
             {[
@@ -87,7 +87,7 @@ export default function QUADSummary() {
         </section>
 
         {/* Core Principles */}
-        <section className="mb-12">
+        <section id="principles" className="mb-12 scroll-mt-32">
           <h2 className="text-xl font-bold mb-6">Core Principles</h2>
           <div className="space-y-4">
             {[
@@ -109,7 +109,7 @@ export default function QUADSummary() {
         </section>
 
         {/* Benefits */}
-        <section className="mb-12">
+        <section id="benefits" className="mb-12 scroll-mt-32">
           <h2 className="text-xl font-bold mb-6">Benefits</h2>
           <div className="bg-green-500/10 rounded-xl p-6 border border-green-500/20">
             <div className="grid md:grid-cols-2 gap-4">
@@ -134,7 +134,7 @@ export default function QUADSummary() {
         </section>
 
         {/* When to Use QUAD */}
-        <section className="mb-12">
+        <section id="when" className="mb-12 scroll-mt-32">
           <h2 className="text-xl font-bold mb-6">When to Use QUAD</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">

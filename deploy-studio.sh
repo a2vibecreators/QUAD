@@ -57,13 +57,45 @@ deploy_env() {
         docker rm ${CONTAINER_NAME} 2>/dev/null || true
     fi
 
+    # Set environment-specific credentials
+    # Source from .env.deploy file (gitignored) or environment variables
+    # Create .env.deploy from .env.deploy.example and fill in real values
+    if [ -f ".env.deploy" ]; then
+        source .env.deploy
+    fi
+
+    if [ "${ENV}" = "dev" ]; then
+        DB_HOST="${DEV_DB_HOST:-postgres-dev}"
+        DB_NAME="${DEV_DB_NAME:-quad_dev_db}"
+        DB_PASS="${DEV_DB_PASS:-quad_dev_pass}"
+        GOOGLE_CLIENT_ID="${DEV_GOOGLE_CLIENT_ID:?ERROR: DEV_GOOGLE_CLIENT_ID not set. Create .env.deploy from .env.deploy.example}"
+        GOOGLE_CLIENT_SECRET="${DEV_GOOGLE_CLIENT_SECRET:?ERROR: DEV_GOOGLE_CLIENT_SECRET not set. Create .env.deploy from .env.deploy.example}"
+        NEXTAUTH_SECRET="${DEV_NEXTAUTH_SECRET:?ERROR: DEV_NEXTAUTH_SECRET not set. Create .env.deploy from .env.deploy.example}"
+    else
+        DB_HOST="${QA_DB_HOST:-postgres-qa}"
+        DB_NAME="${QA_DB_NAME:-quad_qa_db}"
+        DB_PASS="${QA_DB_PASS:-quad_qa_pass}"
+        GOOGLE_CLIENT_ID="${QA_GOOGLE_CLIENT_ID:?ERROR: QA_GOOGLE_CLIENT_ID not set. Create .env.deploy from .env.deploy.example}"
+        GOOGLE_CLIENT_SECRET="${QA_GOOGLE_CLIENT_SECRET:?ERROR: QA_GOOGLE_CLIENT_SECRET not set. Create .env.deploy from .env.deploy.example}"
+        NEXTAUTH_SECRET="${QA_NEXTAUTH_SECRET:?ERROR: QA_NEXTAUTH_SECRET not set. Create .env.deploy from .env.deploy.example}"
+    fi
+
     # Run the new container
     print_status "Starting container: ${CONTAINER_NAME} on port ${PORT}"
     docker run -d \
         --name ${CONTAINER_NAME} \
         --network ${NETWORK_NAME} \
-        -p ${PORT}:80 \
+        -p ${PORT}:3000 \
         --restart unless-stopped \
+        -e NEXTAUTH_URL=https://${ENV}.quadframe.work \
+        -e NEXTAUTH_SECRET=${NEXTAUTH_SECRET} \
+        -e GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID} \
+        -e GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET} \
+        -e DB_HOST=${DB_HOST} \
+        -e DB_PORT=5432 \
+        -e DB_NAME=${DB_NAME} \
+        -e DB_USER=quad_user \
+        -e DB_PASSWORD=${DB_PASS} \
         ${IMAGE_NAME}
 
     # Verify the container is running

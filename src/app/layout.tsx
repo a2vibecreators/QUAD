@@ -4,6 +4,7 @@ import Link from "next/link";
 import { MethodologyProvider } from "@/context/MethodologyContext";
 import MethodologySelector from "@/components/MethodologySelector";
 import { SearchProvider, SearchButton } from "@/components/SearchProvider";
+import SessionProvider from "@/components/SessionProvider";
 
 export const metadata: Metadata = {
   title: "QUAD Framework - Circle of Functions",
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased min-h-screen bg-slate-900">
+        <SessionProvider>
         <SearchProvider>
         <MethodologyProvider>
           {/* Navigation */}
@@ -94,6 +96,7 @@ export default function RootLayout({
           </footer>
         </MethodologyProvider>
         </SearchProvider>
+        </SessionProvider>
       </body>
     </html>
   );

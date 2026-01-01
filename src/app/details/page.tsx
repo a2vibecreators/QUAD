@@ -104,7 +104,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Shared vs Dedicated Resources */}
-        <section className="mb-12">
+        <section id="resources" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Shared vs Dedicated Resources</h2>
           <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700 mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -133,7 +133,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Organizational Structure */}
-        <section className="mb-12">
+        <section id="org-structure" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Organizational Structure</h2>
           <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
             <div className="text-center mb-6">
@@ -182,7 +182,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Enabling Teams */}
-        <section className="mb-12">
+        <section id="enabling" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Enabling Teams (Optional)</h2>
           <p className="text-slate-400 mb-6">
             Enabling Teams are <strong className="text-white">NOT</strong> counted as QUAD Circles. They are optional support groups that provide specialized expertise across ALL 4 circles.
@@ -350,7 +350,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Hierarchy Rules */}
-        <section className="mb-12">
+        <section id="hierarchy" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Hierarchy Rules</h2>
           <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
             <div className="space-y-2">
@@ -397,7 +397,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Agent Class-Object Pattern */}
-        <section className="mb-12">
+        <section id="class-object" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Agent Class-Object Pattern</h2>
           <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
             <div className="grid md:grid-cols-2 gap-6">
@@ -438,7 +438,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Estimation Agent Pipeline */}
-        <section className="mb-12">
+        <section id="estimation" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Estimation Agent Pipeline</h2>
           <p className="text-slate-400 mb-6">
             The Estimation Agent is unique - it orchestrates multiple agents in a <strong className="text-white">sequential pipeline</strong> to produce accurate, confidence-based estimates.
@@ -590,7 +590,7 @@ export default function QUADDetails() {
         </section>
 
         {/* Flow Document Template */}
-        <section className="mb-12">
+        <section id="flow-doc" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">Flow Document Template</h2>
           <div className="bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden">
             <div className="bg-slate-800/50 px-4 py-3 border-b border-slate-700">
@@ -620,7 +620,7 @@ export default function QUADDetails() {
         </section>
 
         {/* One Source of Truth */}
-        <section className="mb-12">
+        <section id="source-truth" className="mb-12 scroll-mt-32">
           <h2 className="text-2xl font-bold mb-6 text-blue-300">One Source of Truth Architecture</h2>
           <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
             <div className="text-center mb-6">

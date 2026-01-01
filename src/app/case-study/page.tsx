@@ -6,8 +6,6 @@ import PageNavigation from "@/components/PageNavigation";
 export default function QUADCaseStudy() {
   const sections = [
     { id: "project", title: "The Project" },
-    { id: "agile", title: "Agile Approach" },
-    { id: "quad", title: "QUAD Approach" },
     { id: "comparison", title: "Comparison" },
   ];
 
@@ -35,7 +33,7 @@ export default function QUADCaseStudy() {
       </section>
 
       {/* Project Scope */}
-      <section className="py-12 px-6 bg-slate-800/30">
+      <section id="project" className="py-12 px-6 bg-slate-800/30">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold mb-6 text-center">The Project</h2>
           <div className="bg-white/5 rounded-xl p-6 border border-white/10">
@@ -60,7 +58,7 @@ export default function QUADCaseStudy() {
       </section>
 
       {/* Visual Comparison */}
-      <section className="py-16 px-6">
+      <section id="comparison" className="py-16 px-6">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-4">Process Flow Comparison</h2>
           <p className="text-slate-400 text-center mb-12 max-w-2xl mx-auto">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import Breadcrumb from "./Breadcrumb";
 
 // Define all pages in order for prev/next navigation
@@ -85,7 +86,9 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
   const currentIndex = pages.findIndex((p) => p.href === pathname);
   const currentPage = pages[currentIndex];
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(sections?.[0]?.id || null);
+  const { data: session, status } = useSession();
 
   // Get flow-based navigation info
   const flowInfo = getFlowInfo(pathname);
@@ -262,18 +265,80 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
               </div>
             )}
 
-            {/* Right: Menu Button */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
-                menuOpen
-                  ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                  : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 border border-slate-700"
-              }`}
-            >
-              <span className="text-sm font-medium hidden sm:inline">Menu</span>
-              <span>{menuOpen ? "✕" : "☰"}</span>
-            </button>
+            {/* Right: User Profile or Sign In + Menu Button */}
+            <div className="flex items-center gap-2">
+              {session ? (
+                /* User Profile Dropdown */
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 text-white"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                      {session.user?.name?.charAt(0).toUpperCase() || session.user?.email?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                    <span className="text-sm hidden sm:inline">{session.user?.name || session.user?.email?.split('@')[0]}</span>
+                    <span className="text-xs">{userMenuOpen ? "▲" : "▼"}</span>
+                  </button>
+
+                  {/* User Dropdown Menu */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                      <div className="px-4 py-3 border-b border-slate-700">
+                        <p className="text-sm font-semibold text-white">{session.user?.name}</p>
+                        <p className="text-xs text-slate-400">{session.user?.email}</p>
+                      </div>
+                      <div className="py-1">
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                        >
+                          📊 Dashboard
+                        </Link>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                        >
+                          👤 My Account
+                        </Link>
+                        <button
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            signOut({ callbackUrl: '/' });
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-slate-700 hover:text-red-300 transition-colors"
+                        >
+                          🚪 Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Sign In Button */
+                <Link
+                  href="/auth/login"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
+                >
+                  <span className="text-sm">Sign In</span>
+                  <span>→</span>
+                </Link>
+              )}
+
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                  menuOpen
+                    ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                    : "bg-slate-800/50 text-slate-300 hover:bg-slate-700/50 border border-slate-700"
+                }`}
+              >
+                <span className="text-sm font-medium hidden sm:inline">Menu</span>
+                <span>{menuOpen ? "✕" : "☰"}</span>
+              </button>
+            </div>
           </div>
         </div>
 
