@@ -27,6 +27,15 @@ if (process.env.NODE_ENV !== 'production') {
 export default prisma;
 
 /**
+ * Legacy query helper for raw SQL (backward compatibility)
+ * Usage: await query('SELECT * FROM table WHERE id = $1', [id])
+ */
+export async function query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }> {
+  const result = await prisma.$queryRawUnsafe<T[]>(sql, ...(params || []));
+  return { rows: result };
+}
+
+/**
  * Helper to disconnect from database (for graceful shutdown)
  */
 export async function disconnect() {

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get user with adoption matrix
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id: userId },
       select: {
         id: true,

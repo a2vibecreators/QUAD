@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = userResult.rows[0];
+    const user = userResult.rows[0] as { id: string; company_id: string };
 
     // Parse request body
     const body = await request.json();
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       [user.company_id, name.trim(), domainType || 'project', `/${name.trim().toLowerCase().replace(/\s+/g, '-')}`]
     );
 
-    const domain = domainResult.rows[0];
+    const domain = domainResult.rows[0] as { id: string; name: string; domain_type: string; created_at: string };
 
     // Assign user to domain with DOMAIN_ADMIN role
     // Note: Database has unique constraint on (user_id, domain_id), so only one row per user per domain

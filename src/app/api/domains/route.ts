@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       where.domain_type = domainType;
     }
 
-    const domains = await prisma.QUAD_domains.findMany({
+    const domains = await prisma.qUAD_domains.findMany({
       where,
       include: {
         sub_domains: {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
     // If parent_domain_id provided, verify it exists and belongs to same company
     if (parent_domain_id) {
-      const parentDomain = await prisma.QUAD_domains.findUnique({
+      const parentDomain = await prisma.qUAD_domains.findUnique({
         where: { id: parent_domain_id }
       });
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     // Build path for hierarchical navigation
     let path = `/${name}`;
     if (parent_domain_id) {
-      const parentDomain = await prisma.QUAD_domains.findUnique({
+      const parentDomain = await prisma.qUAD_domains.findUnique({
         where: { id: parent_domain_id }
       });
       if (parentDomain) {
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create domain
-    const domain = await prisma.QUAD_domains.create({
+    const domain = await prisma.qUAD_domains.create({
       data: {
         company_id: payload.companyId,
         name,

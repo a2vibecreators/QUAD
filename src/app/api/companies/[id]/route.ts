@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const company = await prisma.QUAD_companies.findUnique({
+    const company = await prisma.qUAD_companies.findUnique({
       where: { id },
       include: {
         users: {
@@ -99,7 +99,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { name, size } = body;
 
     // Check if company exists
-    const existing = await prisma.QUAD_companies.findUnique({
+    const existing = await prisma.qUAD_companies.findUnique({
       where: { id }
     });
 
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update company
-    const company = await prisma.QUAD_companies.update({
+    const company = await prisma.qUAD_companies.update({
       where: { id },
       data: {
         ...(name && { name }),
@@ -149,7 +149,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if company exists
-    const existing = await prisma.QUAD_companies.findUnique({
+    const existing = await prisma.qUAD_companies.findUnique({
       where: { id }
     });
 
@@ -158,7 +158,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete company (cascade will delete users, domains, etc.)
-    await prisma.QUAD_companies.delete({
+    await prisma.qUAD_companies.delete({
       where: { id }
     });
 

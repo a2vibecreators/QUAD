@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify circle exists and belongs to user's company
-    const circle = await prisma.QUAD_circles.findUnique({
+    const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
       include: { domain: { select: { company_id: true } } }
     });
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
-    const members = await prisma.QUAD_circle_members.findMany({
+    const members = await prisma.qUAD_circle_members.findMany({
       where: { circle_id: circleId },
       include: {
         user: {
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify circle exists and belongs to user's company
-    const circle = await prisma.QUAD_circles.findUnique({
+    const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
       include: { domain: { select: { company_id: true } } }
     });
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user exists and is in same company
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id: user_id }
     });
 
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if already a member
-    const existing = await prisma.QUAD_circle_members.findUnique({
+    const existing = await prisma.qUAD_circle_members.findUnique({
       where: {
         circle_id_user_id: { circle_id: circleId, user_id }
       }
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const member = await prisma.QUAD_circle_members.create({
+    const member = await prisma.qUAD_circle_members.create({
       data: {
         circle_id: circleId,
         user_id,
@@ -190,7 +190,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify circle exists and belongs to user's company
-    const circle = await prisma.QUAD_circles.findUnique({
+    const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
       include: { domain: { select: { company_id: true } } }
     });
@@ -200,7 +200,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check membership exists
-    const existing = await prisma.QUAD_circle_members.findUnique({
+    const existing = await prisma.qUAD_circle_members.findUnique({
       where: {
         circle_id_user_id: { circle_id: circleId, user_id: userId }
       }
@@ -213,7 +213,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await prisma.QUAD_circle_members.delete({
+    await prisma.qUAD_circle_members.delete({
       where: {
         circle_id_user_id: { circle_id: circleId, user_id: userId }
       }

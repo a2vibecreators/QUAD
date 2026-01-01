@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all users with their adoption matrix
-    const users = await prisma.QUAD_users.findMany({
+    const users = await prisma.qUAD_users.findMany({
       where: { company_id: payload.companyId },
       select: {
         id: true,
@@ -136,7 +136,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify user exists and is in same company
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id: user_id },
       include: { adoption_matrix: true }
     });
@@ -151,7 +151,7 @@ export async function PUT(request: NextRequest) {
     let matrix;
     if (existing) {
       // Update existing
-      matrix = await prisma.QUAD_adoption_matrix.update({
+      matrix = await prisma.qUAD_adoption_matrix.update({
         where: { user_id },
         data: {
           previous_skill_level: existing.skill_level,
@@ -164,7 +164,7 @@ export async function PUT(request: NextRequest) {
       });
     } else {
       // Create new
-      matrix = await prisma.QUAD_adoption_matrix.create({
+      matrix = await prisma.qUAD_adoption_matrix.create({
         data: {
           user_id,
           skill_level: skill_level || 1,

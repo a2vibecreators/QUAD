@@ -30,7 +30,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domainId }
     });
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    const members = await prisma.QUAD_domain_members.findMany({
+    const members = await prisma.qUAD_domain_members.findMany({
       where: { domain_id: domainId },
       include: {
         user: {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domainId }
     });
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify user exists and is in same company
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id: user_id }
     });
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if already a member
-    const existing = await prisma.QUAD_domain_members.findUnique({
+    const existing = await prisma.qUAD_domain_members.findUnique({
       where: {
         user_id_domain_id: { user_id, domain_id: domainId }
       }
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const member = await prisma.QUAD_domain_members.create({
+    const member = await prisma.qUAD_domain_members.create({
       data: {
         user_id,
         domain_id: domainId,
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domainId }
     });
 
@@ -197,7 +197,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check membership exists
-    const existing = await prisma.QUAD_domain_members.findUnique({
+    const existing = await prisma.qUAD_domain_members.findUnique({
       where: {
         user_id_domain_id: { user_id: userId, domain_id: domainId }
       }
@@ -210,7 +210,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await prisma.QUAD_domain_members.delete({
+    await prisma.qUAD_domain_members.delete({
       where: {
         user_id_domain_id: { user_id: userId, domain_id: domainId }
       }

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('is_active');
 
     // Get company's domains
-    const companyDomains = await prisma.QUAD_domains.findMany({
+    const companyDomains = await prisma.qUAD_domains.findMany({
       where: { company_id: payload.companyId },
       select: { id: true }
     });
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       where.is_active = isActive === 'true';
     }
 
-    const circles = await prisma.QUAD_circles.findMany({
+    const circles = await prisma.qUAD_circles.findMany({
       where,
       include: {
         domain: {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domain_id }
     });
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if circle_number already exists in domain
-    const existing = await prisma.QUAD_circles.findUnique({
+    const existing = await prisma.qUAD_circles.findUnique({
       where: {
         domain_id_circle_number: { domain_id, circle_number }
       }
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // If lead_user_id provided, verify they're in same company
     if (lead_user_id) {
-      const leadUser = await prisma.QUAD_users.findUnique({
+      const leadUser = await prisma.qUAD_users.findUnique({
         where: { id: lead_user_id }
       });
       if (!leadUser || leadUser.company_id !== payload.companyId) {
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const circle = await prisma.QUAD_circles.create({
+    const circle = await prisma.qUAD_circles.create({
       data: {
         domain_id,
         circle_number,

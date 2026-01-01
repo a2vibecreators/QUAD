@@ -104,7 +104,7 @@ export async function POST(
       );
     }
 
-    const resource = resourceCheck.rows[0];
+    const resource = resourceCheck.rows[0] as { id: string; resource_type: string };
 
     // Check if blueprint is required for this resource type
     const requirementCheck = await query(
@@ -113,7 +113,7 @@ export async function POST(
       [resource.resource_type]
     );
 
-    const isRequired = requirementCheck.rows[0]?.is_required || false;
+    const isRequired = (requirementCheck.rows[0] as { is_required: boolean } | undefined)?.is_required || false;
 
     // Auto-detect blueprint type if not provided
     const detectedType = blueprintType || detectBlueprintType(blueprintUrl);
@@ -213,8 +213,9 @@ export async function GET(
     // Transform rows to object
     const blueprint: any = {};
     for (const row of result.rows) {
-      const key = row.attribute_name.replace('blueprint_', '');
-      let value = row.attribute_value;
+      const r = row as { attribute_name: string; attribute_value: string };
+      const key = r.attribute_name.replace('blueprint_', '');
+      let value: string | boolean | object = r.attribute_value;
 
       // Parse JSON values
       if (key === 'additional_urls' || key === 'agent_answers') {

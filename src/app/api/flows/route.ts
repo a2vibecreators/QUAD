@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const flowType = searchParams.get('flow_type');
 
     // Build where clause - filter by company's domains
-    const companyDomains = await prisma.QUAD_domains.findMany({
+    const companyDomains = await prisma.qUAD_domains.findMany({
       where: { company_id: payload.companyId },
       select: { id: true }
     });
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     if (circleNumber) where.circle_number = parseInt(circleNumber);
     if (flowType) where.flow_type = flowType;
 
-    const flows = await prisma.QUAD_flows.findMany({
+    const flows = await prisma.qUAD_flows.findMany({
       where,
       include: {
         domain: {
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domain_id }
     });
 
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create flow - starts in Q (Question) stage
-    const flow = await prisma.QUAD_flows.create({
+    const flow = await prisma.qUAD_flows.create({
       data: {
         domain_id,
         title,
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create initial stage history entry
-    await prisma.QUAD_flow_stage_history.create({
+    await prisma.qUAD_flow_stage_history.create({
       data: {
         flow_id: flow.id,
         to_stage: 'Q',

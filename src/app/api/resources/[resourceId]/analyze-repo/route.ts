@@ -38,8 +38,9 @@ export async function POST(
     // Parse Git repo attributes
     const gitAttrs: Record<string, string> = {};
     for (const row of repoResult.rows) {
-      const key = row.attribute_name.replace('git_', '').replace('repo_', '');
-      gitAttrs[key] = row.attribute_value;
+      const r = row as { attribute_name: string; attribute_value: string };
+      const key = r.attribute_name.replace('git_', '').replace('repo_', '');
+      gitAttrs[key] = r.attribute_value;
     }
 
     if (!gitAttrs.url) {
@@ -130,7 +131,7 @@ export async function GET(
       );
     }
 
-    const analysisResult = JSON.parse(result.rows[0].attribute_value);
+    const analysisResult = JSON.parse((result.rows[0] as { attribute_value: string }).attribute_value);
 
     return NextResponse.json({
       success: true,

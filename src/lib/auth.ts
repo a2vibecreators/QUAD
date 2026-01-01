@@ -92,7 +92,7 @@ export async function createSession(
   ipAddress: string | null,
   userAgent: string | null
 ): Promise<void> {
-  await prisma.QUAD_user_sessions.create({
+  await prisma.qUAD_user_sessions.create({
     data: {
       user_id: userId,
       session_token: token,
@@ -107,7 +107,7 @@ export async function createSession(
  * Delete session from database (logout)
  */
 export async function deleteSession(token: string): Promise<void> {
-  await prisma.QUAD_user_sessions.deleteMany({
+  await prisma.qUAD_user_sessions.deleteMany({
     where: { session_token: token },
   });
 }
@@ -116,7 +116,7 @@ export async function deleteSession(token: string): Promise<void> {
  * Validate session exists and is not expired
  */
 export async function validateSession(token: string): Promise<boolean> {
-  const session = await prisma.QUAD_user_sessions.findFirst({
+  const session = await prisma.qUAD_user_sessions.findFirst({
     where: {
       session_token: token,
       expires_at: { gt: new Date() },
@@ -130,7 +130,7 @@ export async function validateSession(token: string): Promise<boolean> {
  * Clean up expired sessions
  */
 export async function cleanupExpiredSessions(): Promise<number> {
-  const result = await prisma.QUAD_user_sessions.deleteMany({
+  const result = await prisma.qUAD_user_sessions.deleteMany({
     where: {
       expires_at: { lt: new Date() },
     },
@@ -147,7 +147,7 @@ export async function cleanupExpiredSessions(): Promise<number> {
  * Get user by email
  */
 export async function getUserByEmail(email: string): Promise<QuadUser | null> {
-  const user = await prisma.QUAD_users.findUnique({
+  const user = await prisma.qUAD_users.findUnique({
     where: { email },
     select: {
       id: true,
@@ -166,7 +166,7 @@ export async function getUserByEmail(email: string): Promise<QuadUser | null> {
  * Get user by ID
  */
 export async function getUserById(userId: string): Promise<QuadUser | null> {
-  const user = await prisma.QUAD_users.findUnique({
+  const user = await prisma.qUAD_users.findUnique({
     where: { id: userId },
     select: {
       id: true,
@@ -185,7 +185,7 @@ export async function getUserById(userId: string): Promise<QuadUser | null> {
  * Get user with password hash for login verification
  */
 export async function getUserWithPassword(email: string) {
-  return await prisma.QUAD_users.findUnique({
+  return await prisma.qUAD_users.findUnique({
     where: { email },
     select: {
       id: true,
@@ -211,7 +211,7 @@ export async function createUser(data: {
 }): Promise<QuadUser> {
   const passwordHash = await hashPassword(data.password);
 
-  const user = await prisma.QUAD_users.create({
+  const user = await prisma.qUAD_users.create({
     data: {
       company_id: data.companyId,
       email: data.email,
@@ -240,7 +240,7 @@ export async function createUser(data: {
  * Get user's adoption matrix position
  */
 export async function getUserAdoptionMatrix(userId: string) {
-  return await prisma.QUAD_adoption_matrix.findUnique({
+  return await prisma.qUAD_adoption_matrix.findUnique({
     where: { user_id: userId },
   });
 }
@@ -253,12 +253,12 @@ export async function updateUserAdoptionMatrix(
   skillLevel: number,
   trustLevel: number
 ) {
-  const existing = await prisma.QUAD_adoption_matrix.findUnique({
+  const existing = await prisma.qUAD_adoption_matrix.findUnique({
     where: { user_id: userId },
   });
 
   if (existing) {
-    return await prisma.QUAD_adoption_matrix.update({
+    return await prisma.qUAD_adoption_matrix.update({
       where: { user_id: userId },
       data: {
         previous_skill_level: existing.skill_level,
@@ -269,7 +269,7 @@ export async function updateUserAdoptionMatrix(
       },
     });
   } else {
-    return await prisma.QUAD_adoption_matrix.create({
+    return await prisma.qUAD_adoption_matrix.create({
       data: {
         user_id: userId,
         skill_level: skillLevel,

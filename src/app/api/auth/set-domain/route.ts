@@ -48,7 +48,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const membership = membershipResult.rows[0];
+    interface MembershipRow {
+      id: string;
+      role: string;
+      allocation_percentage: string;
+      domain_name: string;
+      domain_display_name: string;
+      domain_path: string;
+    }
+    const membership = membershipResult.rows[0] as MembershipRow;
 
     // Get user capabilities for this domain/role
     const capabilitiesResult = await query(
@@ -62,7 +70,15 @@ export async function POST(request: Request) {
       [membership.role]
     );
 
-    const capabilities = capabilitiesResult.rows.reduce((acc, row) => {
+    interface CapabilityRow {
+      capability_category: string;
+      capability_name: string;
+      can_execute: boolean;
+      can_delegate: boolean;
+    }
+    type CapabilitiesMap = Record<string, Record<string, { can_execute: boolean; can_delegate: boolean }>>;
+    const capabilities = capabilitiesResult.rows.reduce((acc: CapabilitiesMap, r) => {
+      const row = r as CapabilityRow;
       if (!acc[row.capability_category]) {
         acc[row.capability_category] = {};
       }
@@ -71,7 +87,7 @@ export async function POST(request: Request) {
         can_delegate: row.can_delegate,
       };
       return acc;
-    }, {} as Record<string, Record<string, { can_execute: boolean; can_delegate: boolean }>>);
+    }, {} as CapabilitiesMap);
 
     // TODO: Store domain_id and role in session
     // For now, we'll return the domain context

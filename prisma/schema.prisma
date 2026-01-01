@@ -2,13 +2,14 @@
 // Shared database with NutriNine - all tables prefixed with QUAD_
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
-  // URL is now in prisma.config.ts (Prisma 7+)
+  url      = env("DATABASE_URL")
 }
 
 // ============================================================================

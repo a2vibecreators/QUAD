@@ -58,19 +58,35 @@ export async function GET(request: Request) {
       });
     }
 
-    const domains = result.rows.map((row) => ({
-      membership_id: row.membership_id,
-      domain_id: row.domain_id,
-      domain_name: row.domain_name,
-      domain_display_name: row.domain_display_name,
-      domain_path: row.domain_path,
-      domain_type: row.domain_type,
-      depth: row.depth,
-      role: row.role,
-      allocation_percentage: parseFloat(row.allocation_percentage),
-      is_primary_domain: row.is_primary_domain,
-      company_name: row.company_name,
-    }));
+    interface DomainRow {
+      membership_id: string;
+      domain_id: string;
+      domain_name: string;
+      domain_display_name: string;
+      domain_path: string;
+      domain_type: string;
+      depth: number;
+      role: string;
+      allocation_percentage: string;
+      is_primary_domain: boolean;
+      company_name: string;
+    }
+    const domains = result.rows.map((r) => {
+      const row = r as DomainRow;
+      return {
+        membership_id: row.membership_id,
+        domain_id: row.domain_id,
+        domain_name: row.domain_name,
+        domain_display_name: row.domain_display_name,
+        domain_path: row.domain_path,
+        domain_type: row.domain_type,
+        depth: row.depth,
+        role: row.role,
+        allocation_percentage: parseFloat(row.allocation_percentage),
+        is_primary_domain: row.is_primary_domain,
+        company_name: row.company_name,
+      };
+    });
 
     return NextResponse.json({
       domains,

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = userResult.rows[0];
+    const user = userResult.rows[0] as { id: string };
 
     // Get all domains where user is a member
     const domainsResult = await query(

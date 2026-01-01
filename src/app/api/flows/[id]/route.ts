@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const flow = await prisma.QUAD_flows.findUnique({
+    const flow = await prisma.qUAD_flows.findUnique({
       where: { id },
       include: {
         domain: {
@@ -111,7 +111,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get existing flow
-    const existing = await prisma.QUAD_flows.findUnique({
+    const existing = await prisma.qUAD_flows.findUnique({
       where: { id },
       include: {
         domain: { select: { company_id: true } }
@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateData.stage_status = stage_status || 'pending';
 
       // Record stage history
-      await prisma.QUAD_flow_stage_history.create({
+      await prisma.qUAD_flow_stage_history.create({
         data: {
           flow_id: id,
           from_stage: existing.quad_stage,
@@ -193,7 +193,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Just status change within same stage
       updateData.stage_status = stage_status;
 
-      await prisma.QUAD_flow_stage_history.create({
+      await prisma.qUAD_flow_stage_history.create({
         data: {
           flow_id: id,
           from_stage: existing.quad_stage,
@@ -206,7 +206,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    const flow = await prisma.QUAD_flows.update({
+    const flow = await prisma.qUAD_flows.update({
       where: { id },
       data: updateData,
       include: {
@@ -247,7 +247,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = await prisma.QUAD_flows.findUnique({
+    const existing = await prisma.qUAD_flows.findUnique({
       where: { id },
       include: {
         domain: { select: { company_id: true } }
@@ -262,7 +262,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.QUAD_flows.delete({
+    await prisma.qUAD_flows.delete({
       where: { id }
     });
 

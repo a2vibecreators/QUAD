@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Flow {
@@ -14,6 +16,10 @@ interface Flow {
   assignee?: {
     full_name: string | null;
     email: string;
+  };
+  domain?: {
+    id: string;
+    name: string;
   };
   flow_type: string | null;
   created_at: string;
@@ -70,94 +76,93 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function FlowsBoard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedStage, setSelectedStage] = useState<"Q" | "U" | "A" | "D" | null>(null);
   const [draggedFlow, setDraggedFlow] = useState<Flow | null>(null);
+  const [domains, setDomains] = useState<{ id: string; name: string }[]>([]);
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
+  const [newFlowData, setNewFlowData] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    flow_type: "feature",
+  });
 
-  // Mock data for demo (replace with actual API call)
+  // Redirect to login if not authenticated
   useEffect(() => {
-    // Simulate API call
-    const mockFlows: Flow[] = [
-      {
-        id: "1",
-        title: "Implement user authentication",
-        description: "Add login/logout with JWT tokens",
-        quad_stage: "D",
-        stage_status: "in_progress",
-        priority: "high",
-        assigned_to: "user1",
-        assignee: { full_name: "Jane Developer", email: "jane@company.com" },
-        flow_type: "feature",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        title: "Design dashboard layout",
-        description: "Create wireframes for main dashboard",
-        quad_stage: "U",
-        stage_status: "in_progress",
-        priority: "medium",
-        assigned_to: "user2",
-        assignee: { full_name: "Bob Designer", email: "bob@company.com" },
-        flow_type: "design",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "3",
-        title: "Setup CI/CD pipeline",
-        description: "Configure GitHub Actions for deployment",
-        quad_stage: "A",
-        stage_status: "pending",
-        priority: "high",
-        assigned_to: null,
-        flow_type: "infrastructure",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "4",
-        title: "What reporting features do we need?",
-        description: "Gather requirements from stakeholders",
-        quad_stage: "Q",
-        stage_status: "pending",
-        priority: "low",
-        assigned_to: null,
-        flow_type: "feature",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "5",
-        title: "API rate limiting requirements",
-        description: "Define rate limits for different tiers",
-        quad_stage: "Q",
-        stage_status: "in_progress",
-        priority: "medium",
-        assigned_to: "user1",
-        assignee: { full_name: "Jane Developer", email: "jane@company.com" },
-        flow_type: "feature",
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: "6",
-        title: "Database optimization",
-        description: "Add indexes for slow queries",
-        quad_stage: "D",
-        stage_status: "completed",
-        priority: "high",
-        assigned_to: "user3",
-        assignee: { full_name: "Alex DBA", email: "alex@company.com" },
-        flow_type: "improvement",
-        created_at: new Date().toISOString(),
-      },
-    ];
+    if (status === "unauthenticated") {
+      router.push("/auth/login");
+    }
+  }, [status, router]);
 
-    setTimeout(() => {
-      setFlows(mockFlows);
+  // Fetch domains
+  const fetchDomains = useCallback(async () => {
+    if (!session?.accessToken) return;
+    try {
+      const res = await fetch("/api/domains/list", {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDomains(data.domains || []);
+        if (data.domains?.length > 0 && !selectedDomain) {
+          setSelectedDomain(data.domains[0].id);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching domains:", err);
+    }
+  }, [session?.accessToken, selectedDomain]);
+
+  // Fetch flows from API
+  const fetchFlows = useCallback(async () => {
+    if (!session?.accessToken) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = selectedDomain
+        ? `/api/flows?domain_id=${selectedDomain}`
+        : "/api/flows";
+
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFlows(data.flows || []);
+      } else if (res.status === 401) {
+        router.push("/auth/login");
+      } else {
+        const errData = await res.json();
+        setError(errData.error || "Failed to fetch flows");
+      }
+    } catch (err) {
+      console.error("Error fetching flows:", err);
+      setError("Network error. Please try again.");
+    } finally {
       setLoading(false);
-    }, 500);
-  }, []);
+    }
+  }, [session?.accessToken, selectedDomain, router]);
+
+  useEffect(() => {
+    if (session?.accessToken) {
+      fetchDomains();
+    }
+  }, [session?.accessToken, fetchDomains]);
+
+  useEffect(() => {
+    if (session?.accessToken) {
+      fetchFlows();
+    }
+  }, [session?.accessToken, selectedDomain, fetchFlows]);
 
   const getFlowsByStage = (stage: "Q" | "U" | "A" | "D") => {
     return flows.filter((flow) => flow.quad_stage === stage);
@@ -171,29 +176,103 @@ export default function FlowsBoard() {
     e.preventDefault();
   };
 
-  const handleDrop = (stage: "Q" | "U" | "A" | "D") => {
-    if (draggedFlow && draggedFlow.quad_stage !== stage) {
-      // Update flow stage
-      setFlows((prev) =>
-        prev.map((f) =>
-          f.id === draggedFlow.id ? { ...f, quad_stage: stage, stage_status: "pending" } : f
-        )
-      );
-      // TODO: Call API to update flow stage
+  const handleDrop = async (stage: "Q" | "U" | "A" | "D") => {
+    if (!draggedFlow || draggedFlow.quad_stage === stage || !session?.accessToken) {
+      setDraggedFlow(null);
+      return;
     }
+
+    // Optimistic update
+    setFlows((prev) =>
+      prev.map((f) =>
+        f.id === draggedFlow.id ? { ...f, quad_stage: stage, stage_status: "pending" } : f
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/flows/${draggedFlow.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({
+          quad_stage: stage,
+          stage_status: "pending",
+        }),
+      });
+
+      if (!res.ok) {
+        // Revert on failure
+        fetchFlows();
+        const errData = await res.json();
+        alert(`Failed to move flow: ${errData.error}`);
+      }
+    } catch (err) {
+      console.error("Error updating flow:", err);
+      fetchFlows();
+      alert("Network error. Please try again.");
+    }
+
     setDraggedFlow(null);
+  };
+
+  const handleCreateFlow = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!session?.accessToken || !selectedDomain) {
+      alert("Please select a domain first");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/flows", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({
+          domain_id: selectedDomain,
+          title: newFlowData.title,
+          description: newFlowData.description || null,
+          priority: newFlowData.priority,
+          flow_type: newFlowData.flow_type,
+          quad_stage: selectedStage || "Q",
+        }),
+      });
+
+      if (res.ok) {
+        setShowCreateModal(false);
+        setNewFlowData({ title: "", description: "", priority: "medium", flow_type: "feature" });
+        setSelectedStage(null);
+        fetchFlows();
+      } else {
+        const errData = await res.json();
+        alert(`Failed to create flow: ${errData.error}`);
+      }
+    } catch (err) {
+      console.error("Error creating flow:", err);
+      alert("Network error. Please try again.");
+    }
   };
 
   const getStageCount = (stage: "Q" | "U" | "A" | "D") => {
     return flows.filter((f) => f.quad_stage === stage).length;
   };
 
-  if (loading) {
+  // Show loading while checking auth
+  if (status === "loading") {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  // Redirect handled in useEffect, but show nothing while redirecting
+  if (!session) {
+    return null;
   }
 
   return (
@@ -211,14 +290,22 @@ export default function FlowsBoard() {
               <h1 className="text-2xl font-bold text-gray-900">QUAD Flow Board</h1>
             </div>
             <div className="flex items-center gap-3">
-              <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                <option>All Domains</option>
-                <option>Engineering</option>
-                <option>Design</option>
+              <select
+                value={selectedDomain}
+                onChange={(e) => setSelectedDomain(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">All Domains</option>
+                {domains.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
               </select>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                disabled={!selectedDomain}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -229,6 +316,23 @@ export default function FlowsBoard() {
           </div>
         </div>
       </header>
+
+      {/* Error Message */}
+      {error && (
+        <div className="mx-4 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
+          <button onClick={fetchFlows} className="ml-4 text-red-600 underline">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
 
       {/* Stage Explanation */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
@@ -383,12 +487,15 @@ export default function FlowsBoard() {
               </button>
             </div>
 
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleCreateFlow}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input
                   type="text"
                   placeholder="What needs to be done?"
+                  value={newFlowData.title}
+                  onChange={(e) => setNewFlowData({ ...newFlowData, title: e.target.value })}
+                  required
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -398,6 +505,8 @@ export default function FlowsBoard() {
                 <textarea
                   placeholder="Add details..."
                   rows={3}
+                  value={newFlowData.description}
+                  onChange={(e) => setNewFlowData({ ...newFlowData, description: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -406,7 +515,8 @@ export default function FlowsBoard() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
                   <select
-                    defaultValue={selectedStage || "Q"}
+                    value={selectedStage || "Q"}
+                    onChange={(e) => setSelectedStage(e.target.value as "Q" | "U" | "A" | "D")}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   >
                     {stages.map((s) => (
@@ -419,7 +529,11 @@ export default function FlowsBoard() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  <select
+                    value={newFlowData.priority}
+                    onChange={(e) => setNewFlowData({ ...newFlowData, priority: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  >
                     <option value="high">High</option>
                     <option value="medium">Medium</option>
                     <option value="low">Low</option>
@@ -429,7 +543,11 @@ export default function FlowsBoard() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                <select
+                  value={newFlowData.flow_type}
+                  onChange={(e) => setNewFlowData({ ...newFlowData, flow_type: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                >
                   <option value="feature">Feature</option>
                   <option value="bug">Bug Fix</option>
                   <option value="improvement">Improvement</option>
@@ -444,6 +562,7 @@ export default function FlowsBoard() {
                   onClick={() => {
                     setShowCreateModal(false);
                     setSelectedStage(null);
+                    setNewFlowData({ title: "", description: "", priority: "medium", flow_type: "feature" });
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                 >
@@ -451,7 +570,8 @@ export default function FlowsBoard() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={!newFlowData.title.trim() || !selectedDomain}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Create Flow
                 </button>

@@ -1,7 +1,7 @@
 /**
- * GET /api/resources/[id] - Get resource by ID
- * PUT /api/resources/[id] - Update resource
- * DELETE /api/resources/[id] - Delete resource
+ * GET /api/resources/[resourceId] - Get resource by ID
+ * PUT /api/resources/[resourceId] - Update resource
+ * DELETE /api/resources/[resourceId] - Delete resource
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,13 +9,13 @@ import { prisma } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
 interface RouteParams {
-  params: Promise<{ id: string }>;
+  params: Promise<{ resourceId: string }>;
 }
 
 // GET: Get resource by ID with attributes
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { resourceId } = await params;
 
     // Verify authentication
     const authHeader = request.headers.get('authorization');
@@ -29,8 +29,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const resource = await prisma.QUAD_domain_resources.findUnique({
-      where: { id },
+    const resource = await prisma.qUAD_domain_resources.findUnique({
+      where: { id: resourceId },
       include: {
         domain: {
           select: { id: true, name: true, company_id: true }
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT: Update resource
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { resourceId } = await params;
 
     // Verify authentication
     const authHeader = request.headers.get('authorization');
@@ -89,8 +89,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = await prisma.QUAD_domain_resources.findUnique({
-      where: { id },
+    const existing = await prisma.qUAD_domain_resources.findUnique({
+      where: { id: resourceId },
       include: {
         domain: { select: { company_id: true } }
       }
@@ -108,8 +108,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const { resource_name, resource_status, attributes } = body;
 
     // Update resource
-    const resource = await prisma.QUAD_domain_resources.update({
-      where: { id },
+    const resource = await prisma.qUAD_domain_resources.update({
+      where: { id: resourceId },
       data: {
         ...(resource_name !== undefined && { resource_name }),
         ...(resource_status !== undefined && { resource_status })
@@ -126,10 +126,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         if (!attr.name) continue;
 
         // Upsert each attribute
-        await prisma.QUAD_resource_attributes.upsert({
+        await prisma.qUAD_resource_attributes.upsert({
           where: {
             resource_id_attribute_name: {
-              resource_id: id,
+              resource_id: resourceId,
               attribute_name: attr.name
             }
           },
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             attribute_value: attr.value
           },
           create: {
-            resource_id: id,
+            resource_id: resourceId,
             attribute_name: attr.name,
             attribute_value: attr.value
           }
@@ -145,8 +145,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
 
       // Refresh to get updated attributes
-      const updated = await prisma.QUAD_domain_resources.findUnique({
-        where: { id },
+      const updated = await prisma.qUAD_domain_resources.findUnique({
+        where: { id: resourceId },
         include: {
           domain: { select: { id: true, name: true } },
           attributes: true
@@ -169,7 +169,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE: Delete resource
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
+    const { resourceId } = await params;
 
     // Verify authentication
     const authHeader = request.headers.get('authorization');
@@ -188,8 +188,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = await prisma.QUAD_domain_resources.findUnique({
-      where: { id },
+    const existing = await prisma.qUAD_domain_resources.findUnique({
+      where: { id: resourceId },
       include: {
         domain: { select: { company_id: true } }
       }
@@ -204,8 +204,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete resource (cascade will delete attributes)
-    await prisma.QUAD_domain_resources.delete({
-      where: { id }
+    await prisma.qUAD_domain_resources.delete({
+      where: { id: resourceId }
     });
 
     return NextResponse.json({ message: 'Resource deleted successfully' });

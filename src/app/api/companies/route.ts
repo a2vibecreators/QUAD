@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Check if user is admin
     if (payload.role !== 'ADMIN') {
       // Non-admins can only see their own company
-      const company = await prisma.QUAD_companies.findUnique({
+      const company = await prisma.qUAD_companies.findUnique({
         where: { id: payload.companyId },
         include: {
           _count: {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Admins can see all companies
-    const companies = await prisma.QUAD_companies.findMany({
+    const companies = await prisma.qUAD_companies.findMany({
       include: {
         _count: {
           select: { users: true, domains: true }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if company with same admin email exists
-    const existing = await prisma.QUAD_companies.findUnique({
+    const existing = await prisma.qUAD_companies.findUnique({
       where: { admin_email }
     });
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create company
-    const company = await prisma.QUAD_companies.create({
+    const company = await prisma.qUAD_companies.create({
       data: {
         name,
         admin_email,

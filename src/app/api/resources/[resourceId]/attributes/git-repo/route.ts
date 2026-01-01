@@ -111,7 +111,7 @@ export async function POST(
       );
     }
 
-    const resource = resourceCheck.rows[0];
+    const resource = resourceCheck.rows[0] as { id: string; resource_type: string };
 
     // Auto-detect Git provider if not specified
     const detectedProvider = gitRepoType || detectGitProvider(gitRepoUrl);
@@ -220,8 +220,9 @@ export async function GET(
     // Transform rows to object
     const gitRepo: any = {};
     for (const row of result.rows) {
-      const key = row.attribute_name.replace('git_', '').replace('repo_', '');
-      let value = row.attribute_value;
+      const r = row as { attribute_name: string; attribute_value: string };
+      const key = r.attribute_name.replace('git_', '').replace('repo_', '');
+      let value: string | boolean | object = r.attribute_value;
 
       // Parse JSON values
       if (key === 'analysis_result') {

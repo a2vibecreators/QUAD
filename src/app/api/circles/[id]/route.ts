@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const circle = await prisma.QUAD_circles.findUnique({
+    const circle = await prisma.qUAD_circles.findUnique({
       where: { id },
       include: {
         domain: {
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = await prisma.QUAD_circles.findUnique({
+    const existing = await prisma.qUAD_circles.findUnique({
       where: { id },
       include: { domain: { select: { company_id: true } } }
     });
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // If changing lead, verify they're in same company
     if (lead_user_id !== undefined && lead_user_id !== null) {
-      const leadUser = await prisma.QUAD_users.findUnique({
+      const leadUser = await prisma.qUAD_users.findUnique({
         where: { id: lead_user_id }
       });
       if (!leadUser || leadUser.company_id !== payload.companyId) {
@@ -130,7 +130,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const circle = await prisma.QUAD_circles.update({
+    const circle = await prisma.qUAD_circles.update({
       where: { id },
       data: {
         ...(circle_name !== undefined && { circle_name }),
@@ -176,7 +176,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const existing = await prisma.QUAD_circles.findUnique({
+    const existing = await prisma.qUAD_circles.findUnique({
       where: { id },
       include: { domain: { select: { company_id: true } } }
     });
@@ -189,7 +189,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.QUAD_circles.delete({
+    await prisma.qUAD_circles.delete({
       where: { id }
     });
 

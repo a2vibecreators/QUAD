@@ -16,33 +16,9 @@ export default function Home() {
           <p className="text-xl font-semibold text-blue-300 mb-1">
             Quick Unified Agentic Development
           </p>
-          <p className="text-base text-slate-500 mb-4">
+          <p className="text-base text-slate-500 mb-6">
             <span className="text-blue-400">Q</span>uestion → <span className="text-green-400">U</span>nderstand → <span className="text-amber-400">A</span>llocate → <span className="text-purple-400">D</span>eliver
           </p>
-
-          {/* 4-4-4 Principle Banner */}
-          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-4 mb-6 max-w-2xl mx-auto">
-            <p className="text-base font-semibold text-emerald-300 mb-1">The 4-4-4 Principle</p>
-            <div className="flex justify-center gap-4 mb-2">
-              <div className="text-center">
-                <div className="text-2xl font-black text-emerald-400">4</div>
-                <div className="text-xs text-slate-400">hrs/day</div>
-              </div>
-              <div className="text-xl text-slate-600">×</div>
-              <div className="text-center">
-                <div className="text-2xl font-black text-emerald-400">4</div>
-                <div className="text-xs text-slate-400">days/wk</div>
-              </div>
-              <div className="text-xl text-slate-600">=</div>
-              <div className="text-center">
-                <div className="text-2xl font-black text-emerald-400">4X</div>
-                <div className="text-xs text-slate-400">efficiency</div>
-              </div>
-            </div>
-            <p className="text-xs text-slate-400">
-              Work smarter, not longer.
-            </p>
-          </div>
 
           {/* Circle of Functions - Super Blocks */}
           <div className="max-w-3xl mx-auto mb-8 px-4">
@@ -299,80 +275,179 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The 4 Circles */}
+      {/* The 4 Circles - Shared to Dedicated Spectrum */}
       <section className="py-16 px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-center">The 4 Circles</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                num: 1,
-                name: "Management",
-                focus: "Business 80% / Technical 20%",
-                mode: "Dedicated",
-                roles: ["Business Analyst", "Project Manager", "Tech Lead"],
-                agents: ["Story Agent", "Scheduling Agent", "Doc Agent"],
-                color: "blue",
-              },
-              {
-                num: 2,
-                name: "Development",
-                focus: "Business 30% / Technical 70%",
-                mode: "Mostly Dedicated",
-                roles: ["Full Stack", "Backend", "UI", "Mobile"],
-                agents: ["Dev Agent (UI)", "Dev Agent (API)", "Code Review"],
-                color: "green",
-              },
-              {
-                num: 3,
-                name: "QA",
-                focus: "Business 30% / Technical 70%",
-                mode: "Mostly Shared",
-                roles: ["QA Engineer", "Automation", "Performance", "Security"],
-                agents: ["UI Test Agent", "API Test Agent", "Test Generator"],
-                color: "yellow",
-              },
-              {
-                num: 4,
-                name: "Infrastructure",
-                focus: "Business 20% / Technical 80%",
-                mode: "Always Shared",
-                roles: ["DevOps", "SRE", "Cloud Engineer", "DBA"],
-                agents: ["Deploy Agent", "Monitoring Agent", "Incident Agent"],
-                color: "purple",
-              },
-            ].map((circle) => (
-              <div
-                key={circle.num}
-                className={`circle-${circle.name.toLowerCase()} rounded-xl p-6 border`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-full bg-${circle.color}-500/30 flex items-center justify-center text-${circle.color}-300 font-bold text-xl`}>
-                      {circle.num}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg">{circle.name} Circle</h3>
-                      <p className="text-xs text-slate-400">{circle.focus}</p>
-                    </div>
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl font-bold mb-4 text-center">The 4 Circles</h2>
+          <p className="text-center text-slate-400 mb-8 max-w-2xl mx-auto">
+            Resource allocation spectrum: from shared infrastructure to dedicated management
+          </p>
+
+          {/* Spectrum Bar */}
+          <div className="mb-8 px-4">
+            <div className="relative h-3 rounded-full bg-gradient-to-r from-blue-600 via-green-500 via-yellow-500 to-purple-600 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent to-transparent opacity-50"></div>
+            </div>
+            <div className="flex justify-between mt-2 text-xs">
+              <span className="text-blue-400 font-medium">← DEDICATED</span>
+              <span className="text-purple-400 font-medium">SHARED →</span>
+            </div>
+          </div>
+
+          {/* Sequential Circles - Horizontal Flow (1→2→3→4) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Circle 1: Management - Dedicated */}
+            <div className="relative group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <span className="px-3 py-1 bg-blue-500 text-white rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
+                  <span className="lg:hidden">DED</span>
+                  <span className="hidden lg:inline">DEDICATED</span>
+                </span>
+              </div>
+              <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 rounded-xl p-5 border-2 border-blue-500/50 hover:border-blue-400 transition-all h-full">
+                <div className="flex items-center gap-2 mb-3 mt-2">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/30 flex items-center justify-center text-blue-300 font-bold text-lg">1</div>
+                  <div>
+                    <h3 className="font-bold text-white">Management</h3>
+                    <p className="text-[10px] text-blue-300">Biz 80%</p>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full bg-${circle.color}-500/20 text-${circle.color}-300`}>
-                    {circle.mode}
-                  </span>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {circle.roles.map((role) => (
-                    <span key={role} className="px-2 py-1 bg-slate-600/30 text-slate-300 rounded text-xs">
-                      {role}
-                    </span>
-                  ))}
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-wrap gap-1">
+                    {["BA", "PM", "Tech Lead"].map((r) => (
+                      <span key={r} className="px-2 py-0.5 bg-blue-500/20 text-blue-200 rounded">{r}</span>
+                    ))}
+                  </div>
+                  <p className="text-blue-300/70 text-[10px]">Story, Schedule, Doc Agents</p>
                 </div>
-                <div className="text-xs text-slate-500">
-                  <span className="text-slate-400">AI Agents:</span>{" "}
-                  {circle.agents.join(", ")}
+                <div className="mt-3 pt-3 border-t border-blue-500/30">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-blue-900/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[100%] bg-blue-400 rounded-full"></div>
+                    </div>
+                    <span className="text-[10px] text-blue-400">100%</span>
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Circle 2: Development - Mostly Dedicated */}
+            <div className="relative group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <span className="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
+                  <span className="lg:hidden">MOSTLY DED</span>
+                  <span className="hidden lg:inline">MOSTLY DEDICATED</span>
+                </span>
+              </div>
+              <div className="bg-gradient-to-br from-green-900/40 to-green-800/20 rounded-xl p-5 border-2 border-green-500/50 hover:border-green-400 transition-all h-full">
+                <div className="flex items-center gap-2 mb-3 mt-2">
+                  <div className="w-10 h-10 rounded-full bg-green-500/30 flex items-center justify-center text-green-300 font-bold text-lg">2</div>
+                  <div>
+                    <h3 className="font-bold text-white">Development</h3>
+                    <p className="text-[10px] text-green-300">Tech 70%</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-wrap gap-1">
+                    {["Full Stack", "Backend", "Mobile"].map((r) => (
+                      <span key={r} className="px-2 py-0.5 bg-green-500/20 text-green-200 rounded">{r}</span>
+                    ))}
+                  </div>
+                  <p className="text-green-300/70 text-[10px]">Dev Agent UI, API, Code Review</p>
+                </div>
+                <div className="mt-3 pt-3 border-t border-green-500/30">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-green-900/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[75%] bg-green-400 rounded-full"></div>
+                    </div>
+                    <span className="text-[10px] text-green-400">75%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Circle 3: QA - Mostly Shared */}
+            <div className="relative group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <span className="px-3 py-1 bg-yellow-500 text-black rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
+                  <span className="lg:hidden">MOSTLY SHR</span>
+                  <span className="hidden lg:inline">MOSTLY SHARED</span>
+                </span>
+              </div>
+              <div className="bg-gradient-to-br from-yellow-900/40 to-yellow-800/20 rounded-xl p-5 border-2 border-yellow-500/50 hover:border-yellow-400 transition-all h-full">
+                <div className="flex items-center gap-2 mb-3 mt-2">
+                  <div className="w-10 h-10 rounded-full bg-yellow-500/30 flex items-center justify-center text-yellow-300 font-bold text-lg">3</div>
+                  <div>
+                    <h3 className="font-bold text-white">QA</h3>
+                    <p className="text-[10px] text-yellow-300">Tech 70%</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-wrap gap-1">
+                    {["QA Eng", "Automation", "Security"].map((r) => (
+                      <span key={r} className="px-2 py-0.5 bg-yellow-500/20 text-yellow-200 rounded">{r}</span>
+                    ))}
+                  </div>
+                  <p className="text-yellow-300/70 text-[10px]">UI Test, API Test, Generator</p>
+                </div>
+                <div className="mt-3 pt-3 border-t border-yellow-500/30">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-yellow-900/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[40%] bg-yellow-400 rounded-full"></div>
+                    </div>
+                    <span className="text-[10px] text-yellow-400">40%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Circle 4: Infrastructure - Shared */}
+            <div className="relative group">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
+                  <span className="lg:hidden">SHR</span>
+                  <span className="hidden lg:inline">SHARED</span>
+                </span>
+              </div>
+              <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 rounded-xl p-5 border-2 border-purple-500/50 hover:border-purple-400 transition-all h-full">
+                <div className="flex items-center gap-2 mb-3 mt-2">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center text-purple-300 font-bold text-lg">4</div>
+                  <div>
+                    <h3 className="font-bold text-white">Infrastructure</h3>
+                    <p className="text-[10px] text-purple-300">Tech 80%</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-wrap gap-1">
+                    {["DevOps", "SRE", "DBA"].map((r) => (
+                      <span key={r} className="px-2 py-0.5 bg-purple-500/20 text-purple-200 rounded">{r}</span>
+                    ))}
+                  </div>
+                  <p className="text-purple-300/70 text-[10px]">Deploy, Monitor, Incident Agents</p>
+                </div>
+                <div className="mt-3 pt-3 border-t border-purple-500/30">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 bg-purple-900/50 rounded-full overflow-hidden">
+                      <div className="h-full w-[20%] bg-purple-400 rounded-full"></div>
+                    </div>
+                    <span className="text-[10px] text-purple-400">20%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Explanation */}
+          <div className="mt-8 p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">💡</span>
+              <div>
+                <p className="text-sm text-slate-300">
+                  <strong className="text-white">Shared vs Dedicated:</strong> Infrastructure resources are shared across projects (cost-efficient),
+                  while Management resources are dedicated per project (focused attention). Development and QA fall in between based on project needs.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -411,7 +486,6 @@ export default function Home() {
                 desc: "Watch how requirements flow through QUAD - animated SVG visualization",
                 href: "/flow",
                 icon: "🔄",
-                badge: "NEW",
               },
               {
                 title: "Main Concept",
@@ -461,7 +535,6 @@ export default function Home() {
                 desc: "Test your understanding of QUAD methodology concepts",
                 href: "/quiz",
                 icon: "🎯",
-                badge: "NEW",
               },
               {
                 title: "Cheat Sheet",
@@ -481,7 +554,6 @@ export default function Home() {
                 desc: "Measure your AI journey - 3×3 or 5×5 positioning system with safety buffers",
                 href: "/adoption-matrix",
                 icon: "🎯",
-                badge: "NEW",
               },
               {
                 title: "Documentation",
@@ -679,10 +751,39 @@ export default function Home() {
         </div>
       </section>
 
+      {/* 4-4-4 Principle Section */}
+      <section className="py-16 px-8">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-8 text-center">
+            <h2 className="text-2xl font-bold text-emerald-300 mb-6">The 4-4-4 Principle</h2>
+            <div className="flex justify-center gap-8 mb-6">
+              <div className="text-center">
+                <div className="text-5xl font-black text-emerald-400">4</div>
+                <div className="text-sm text-slate-400 mt-1">hrs/day</div>
+              </div>
+              <div className="text-3xl text-slate-600 self-center">×</div>
+              <div className="text-center">
+                <div className="text-5xl font-black text-emerald-400">4</div>
+                <div className="text-sm text-slate-400 mt-1">days/wk</div>
+              </div>
+              <div className="text-3xl text-slate-600 self-center">=</div>
+              <div className="text-center">
+                <div className="text-5xl font-black text-emerald-400">4X</div>
+                <div className="text-sm text-slate-400 mt-1">efficiency</div>
+              </div>
+            </div>
+            <p className="text-slate-300 max-w-xl mx-auto">
+              Work smarter, not longer. With AI handling repetitive tasks, 16 focused hours
+              beat 40 distracted hours. QUAD enables sustainable productivity.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-16 px-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready for the 4-4-4 Revolution?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Workflow?</h2>
           <p className="text-slate-400 mb-8">
             Work 4 hours/day, 4 days/week, achieve 4X efficiency. Start with Case Studies to see QUAD in action across 5 domains.
           </p>

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = userResult.rows[0];
+    const user = userResult.rows[0] as { id: string };
 
     const body: StartInterviewRequest = await request.json();
     const { domainId, projectDescription } = body;

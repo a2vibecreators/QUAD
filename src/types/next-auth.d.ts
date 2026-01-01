@@ -11,6 +11,7 @@ declare module "next-auth" {
       domainRole?: string
       allocationPercentage?: number
     } & DefaultSession["user"]
+    accessToken?: string
   }
 }
 
@@ -23,5 +24,6 @@ declare module "next-auth/jwt" {
     domainId?: string
     domainRole?: string
     allocationPercentage?: number
+    accessToken?: string
   }
 }

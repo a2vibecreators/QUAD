@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       where.is_active = true;
     }
 
-    const roles = await prisma.QUAD_roles.findMany({
+    const roles = await prisma.qUAD_roles.findMany({
       where,
       include: {
         _count: {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if role code already exists in this company
-    const existing = await prisma.QUAD_roles.findUnique({
+    const existing = await prisma.qUAD_roles.findUnique({
       where: {
         company_id_role_code: {
           company_id: payload.companyId,
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create role
-    const role = await prisma.QUAD_roles.create({
+    const role = await prisma.qUAD_roles.create({
       data: {
         company_id: payload.companyId,
         role_code,

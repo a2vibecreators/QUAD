@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const resourceStatus = searchParams.get('resource_status');
 
     // Get company's domains
-    const companyDomains = await prisma.QUAD_domains.findMany({
+    const companyDomains = await prisma.qUAD_domains.findMany({
       where: { company_id: payload.companyId },
       select: { id: true }
     });
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (resourceType) where.resource_type = resourceType;
     if (resourceStatus) where.resource_status = resourceStatus;
 
-    const resources = await prisma.QUAD_domain_resources.findMany({
+    const resources = await prisma.qUAD_domain_resources.findMany({
       where,
       include: {
         domain: {
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify domain exists and belongs to user's company
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id: domain_id }
     });
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create resource with optional attributes (EAV pattern)
-    const resource = await prisma.QUAD_domain_resources.create({
+    const resource = await prisma.qUAD_domain_resources.create({
       data: {
         domain_id,
         resource_type,

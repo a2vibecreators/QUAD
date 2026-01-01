@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // If user_id specified, filter by user (must be in same company)
     if (userId) {
-      const user = await prisma.QUAD_users.findUnique({
+      const user = await prisma.qUAD_users.findUnique({
         where: { id: userId }
       });
       if (!user || user.company_id !== payload.companyId) {
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       where.user_id = userId;
     } else {
       // Get all users in company
-      const companyUsers = await prisma.QUAD_users.findMany({
+      const companyUsers = await prisma.qUAD_users.findMany({
         where: { company_id: payload.companyId },
         select: { id: true }
       });
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       where.period_end = { lte: new Date(endDate) };
     }
 
-    const metrics = await prisma.QUAD_workload_metrics.findMany({
+    const metrics = await prisma.qUAD_workload_metrics.findMany({
       where,
       include: {
         user: {
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user exists and is in same company
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id: user_id }
     });
 
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
 
     // If domain_id provided, verify it
     if (domain_id) {
-      const domain = await prisma.QUAD_domains.findUnique({
+      const domain = await prisma.qUAD_domains.findUnique({
         where: { id: domain_id }
       });
       if (!domain || domain.company_id !== payload.companyId) {
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing entry (upsert)
-    const existing = await prisma.QUAD_workload_metrics.findFirst({
+    const existing = await prisma.qUAD_workload_metrics.findFirst({
       where: {
         user_id,
         domain_id: domain_id || null,
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
     let metric;
     if (existing) {
       // Update existing
-      metric = await prisma.QUAD_workload_metrics.update({
+      metric = await prisma.qUAD_workload_metrics.update({
         where: { id: existing.id },
         data: {
           assignments: assignments ?? existing.assignments,
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new
-      metric = await prisma.QUAD_workload_metrics.create({
+      metric = await prisma.qUAD_workload_metrics.create({
         data: {
           user_id,
           domain_id,

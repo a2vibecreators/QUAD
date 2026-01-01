@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sessionResource = sessionResult.rows[0];
+    const sessionResource = sessionResult.rows[0] as { id: string };
 
     // For now, we'll store the conversation in a simple structure
     // TODO: Move to dedicated table with proper conversation tracking

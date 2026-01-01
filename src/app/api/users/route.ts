@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       where.is_active = isActive === 'true';
     }
 
-    const users = await prisma.QUAD_users.findMany({
+    const users = await prisma.qUAD_users.findMany({
       where,
       select: {
         id: true,
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user with email exists
-    const existing = await prisma.QUAD_users.findUnique({
+    const existing = await prisma.qUAD_users.findUnique({
       where: { email }
     });
 
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const password_hash = await hashPassword(password);
 
     // Create user
-    const user = await prisma.QUAD_users.create({
+    const user = await prisma.qUAD_users.create({
       data: {
         company_id: payload.companyId,
         email,

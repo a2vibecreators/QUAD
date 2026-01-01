@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const domain = await prisma.QUAD_domains.findUnique({
+    const domain = await prisma.qUAD_domains.findUnique({
       where: { id },
       include: {
         parent_domain: {
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if domain exists
-    const existing = await prisma.QUAD_domains.findUnique({
+    const existing = await prisma.qUAD_domains.findUnique({
       where: { id }
     });
 
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (parent_domain_id === null) {
         newPath = `/${name || existing.name}`;
       } else {
-        const parentDomain = await prisma.QUAD_domains.findUnique({
+        const parentDomain = await prisma.qUAD_domains.findUnique({
           where: { id: parent_domain_id }
         });
         if (parentDomain && parentDomain.company_id === payload.companyId) {
@@ -155,7 +155,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       newPath = pathParts.join('/');
     }
 
-    const domain = await prisma.QUAD_domains.update({
+    const domain = await prisma.qUAD_domains.update({
       where: { id },
       data: {
         ...(name && { name }),
@@ -198,7 +198,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if domain exists
-    const existing = await prisma.QUAD_domains.findUnique({
+    const existing = await prisma.qUAD_domains.findUnique({
       where: { id },
       include: {
         _count: { select: { sub_domains: true } }
@@ -221,7 +221,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await prisma.QUAD_domains.delete({
+    await prisma.qUAD_domains.delete({
       where: { id }
     });
 

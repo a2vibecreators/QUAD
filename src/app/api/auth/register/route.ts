@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await prisma.QUAD_users.findUnique({
+    const existingUser = await prisma.qUAD_users.findUnique({
       where: { email },
     });
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (!targetCompanyId && companyName) {
       // Create new company
-      const company = await prisma.QUAD_companies.create({
+      const company = await prisma.qUAD_companies.create({
         data: {
           name: companyName,
           admin_email: email,

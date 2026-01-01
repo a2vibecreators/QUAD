@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
       [companyName, adminEmail, size || 'medium']
     );
 
-    const company = companyResult.rows[0];
+    interface CompanyRow { id: string; name: string; admin_email: string; size: string; }
+    const company = companyResult.rows[0] as CompanyRow;
 
     // Create QUAD_ADMIN user
     const userResult = await query(
@@ -54,7 +55,8 @@ export async function POST(request: NextRequest) {
       [company.id, adminEmail, passwordHash, fullName || 'Admin']
     );
 
-    const user = userResult.rows[0];
+    interface UserRow { id: string; company_id: string; email: string; role: string; full_name: string; is_active: boolean; }
+    const user = userResult.rows[0] as UserRow;
 
     // Generate JWT token
     const token = generateToken(user);

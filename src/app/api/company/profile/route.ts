@@ -53,7 +53,22 @@ export async function GET(request: Request) {
       );
     }
 
-    const userData = result.rows[0];
+    interface UserDataRow {
+      user_id: string;
+      email: string;
+      user_role: string;
+      is_active: boolean;
+      company_id: string;
+      company_name: string;
+      admin_email: string;
+      company_size: string;
+      adoption_level: string;
+      estimation_preset: string;
+      refresh_interval: number;
+      company_created_at: string;
+      active_users: string;
+    }
+    const userData = result.rows[0] as UserDataRow;
 
     // Fetch enabled integrations
     const integrationsResult = await query(
@@ -81,11 +96,14 @@ export async function GET(request: Request) {
         createdAt: userData.company_created_at,
         activeUsers: parseInt(userData.active_users),
       },
-      integrations: integrationsResult.rows.map((row) => ({
-        id: row.integration_id,
-        enabled: row.enabled,
-        config: row.config,
-      })),
+      integrations: integrationsResult.rows.map((r) => {
+        const row = r as { integration_id: string; enabled: boolean; config: string };
+        return {
+          id: row.integration_id,
+          enabled: row.enabled,
+          config: row.config,
+        };
+      }),
     };
 
     // Format for dashboard component (flatten for easier access)

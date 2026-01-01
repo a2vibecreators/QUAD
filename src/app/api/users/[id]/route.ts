@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const user = await prisma.QUAD_users.findUnique({
+    const user = await prisma.qUAD_users.findUnique({
       where: { id },
       select: {
         id: true,
@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user exists and is in same company
-    const existing = await prisma.QUAD_users.findUnique({
+    const existing = await prisma.qUAD_users.findUnique({
       where: { id }
     });
 
@@ -139,7 +139,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (is_active !== undefined) updateData.is_active = is_active;
     }
 
-    const user = await prisma.QUAD_users.update({
+    const user = await prisma.qUAD_users.update({
       where: { id },
       data: updateData,
       select: {
@@ -185,7 +185,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if user exists and is in same company
-    const existing = await prisma.QUAD_users.findUnique({
+    const existing = await prisma.qUAD_users.findUnique({
       where: { id }
     });
 
@@ -205,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await prisma.QUAD_users.delete({
+    await prisma.qUAD_users.delete({
       where: { id }
     });
 

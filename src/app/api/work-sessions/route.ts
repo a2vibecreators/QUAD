@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Verify user is in same company
     if (userId !== payload.userId) {
-      const user = await prisma.QUAD_users.findUnique({
+      const user = await prisma.qUAD_users.findUnique({
         where: { id: userId }
       });
       if (!user || user.company_id !== payload.companyId) {
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       where.is_workday = isWorkday === 'true';
     }
 
-    const sessions = await prisma.QUAD_work_sessions.findMany({
+    const sessions = await prisma.qUAD_work_sessions.findMany({
       where,
       include: {
         user: {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const user = await prisma.QUAD_users.findUnique({
+      const user = await prisma.qUAD_users.findUnique({
         where: { id: targetUserId }
       });
       if (!user || user.company_id !== payload.companyId) {
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     // Check for existing session on this date (upsert)
     const sessionDateObj = new Date(session_date);
-    const existing = await prisma.QUAD_work_sessions.findUnique({
+    const existing = await prisma.qUAD_work_sessions.findUnique({
       where: {
         user_id_session_date: {
           user_id: targetUserId,
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     let session;
     if (existing) {
       // Update existing
-      session = await prisma.QUAD_work_sessions.update({
+      session = await prisma.qUAD_work_sessions.update({
         where: { id: existing.id },
         data: {
           hours_worked: hours_worked !== undefined ? hours_worked : existing.hours_worked,
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new
-      session = await prisma.QUAD_work_sessions.create({
+      session = await prisma.qUAD_work_sessions.create({
         data: {
           user_id: targetUserId,
           session_date: sessionDateObj,

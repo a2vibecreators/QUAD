@@ -57,7 +57,7 @@ export async function POST(request: Request) {
       ]
     );
 
-    const companyId = result.rows[0].id;
+    const companyId = (result.rows[0] as { id: string }).id;
 
     // Store access request metadata (for admin review)
     await query(

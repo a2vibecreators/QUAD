@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const role = await prisma.QUAD_roles.findUnique({
+    const role = await prisma.qUAD_roles.findUnique({
       where: { id },
       include: {
         users: {
@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if role exists and belongs to company
-    const existing = await prisma.QUAD_roles.findUnique({
+    const existing = await prisma.qUAD_roles.findUnique({
       where: { id }
     });
 
@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Note: role_code cannot be changed after creation
 
-    const role = await prisma.QUAD_roles.update({
+    const role = await prisma.qUAD_roles.update({
       where: { id },
       data: updateData
     });
@@ -200,7 +200,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if role exists and belongs to company
-    const existing = await prisma.QUAD_roles.findUnique({
+    const existing = await prisma.qUAD_roles.findUnique({
       where: { id },
       include: {
         _count: {
@@ -233,7 +233,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await prisma.QUAD_roles.delete({
+    await prisma.qUAD_roles.delete({
       where: { id }
     });
 
