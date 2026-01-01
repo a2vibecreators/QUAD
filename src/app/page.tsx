@@ -237,15 +237,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* CTA */}
-          <div className="text-center mt-12">
-            <Link
-              href="/concept"
-              className="inline-block px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 rounded-lg font-semibold text-lg transition-all hover:scale-105 hover:shadow-lg"
-            >
-              Learn the QUAD Development Model →
-            </Link>
-          </div>
         </div>
       </section>
 
@@ -594,7 +585,7 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-6">
             {/* EXPLORE Flow */}
             <Link
-              href="/discovery"
+              href="/concept"
               className="group relative rounded-2xl p-6 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/30 hover:border-blue-400/50 transition-all hover:scale-[1.02]"
             >
               <div className="flex items-center gap-3 mb-4">
@@ -607,10 +598,10 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-sm text-slate-400 mb-4">
-                Understand QUAD methodology - discovery, value proposition, concepts, architecture, and terminology.
+                Understand QUAD methodology - concepts, discovery, value proposition, architecture, and terminology.
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {["Discovery", "Pitch", "Flow", "Concept", "Architecture", "Details", "Terms", "Summary"].map((p) => (
+                {["Concept", "Discovery", "Pitch", "Flow", "Architecture", "Details", "Terms", "Summary"].map((p) => (
                   <span key={p} className="px-2 py-0.5 bg-blue-500/10 text-blue-300 rounded text-xs">
                     {p}
                   </span>
