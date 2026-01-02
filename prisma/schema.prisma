@@ -692,6 +692,7 @@ model QUAD_requirements {
   // Relations
   domain     QUAD_domains      @relation(fields: [domain_id], references: [id], onDelete: Cascade)
   milestones QUAD_milestones[]
+  tickets    QUAD_tickets[]    // Tickets generated from this requirement
 
   @@index([domain_id])
   @@index([status])
@@ -718,6 +719,7 @@ model QUAD_milestones {
   requirement QUAD_requirements? @relation(fields: [requirement_id], references: [id], onDelete: SetNull)
   domain      QUAD_domains       @relation(fields: [domain_id], references: [id], onDelete: Cascade)
   cycles      QUAD_cycles[]
+  tickets     QUAD_tickets[]     // Tickets generated from this milestone
 
   @@index([requirement_id])
   @@index([domain_id])
@@ -764,6 +766,11 @@ model QUAD_tickets {
   parent_ticket_id String? @db.Uuid // For sub-tasks
   flow_id          String? @db.Uuid // Link to QUAD_flows
 
+  // BA Agent: Source tracking (from which requirement/milestone)
+  source_requirement_id String? @db.Uuid
+  source_milestone_id   String? @db.Uuid
+  ai_generated          Boolean @default(false) // True if created by BA agent
+
   // Core fields
   ticket_number       String  @db.VarChar(50) // e.g., PROJ-123
   title               String  @db.VarChar(500)
@@ -801,13 +808,15 @@ model QUAD_tickets {
   updated_at   DateTime  @updatedAt
 
   // Relations
-  domain        QUAD_domains            @relation(fields: [domain_id], references: [id], onDelete: Cascade)
-  cycle         QUAD_cycles?            @relation(fields: [cycle_id], references: [id], onDelete: SetNull)
-  parent_ticket QUAD_tickets?           @relation("TicketSubtasks", fields: [parent_ticket_id], references: [id], onDelete: Cascade)
-  subtasks      QUAD_tickets[]          @relation("TicketSubtasks")
-  comments      QUAD_ticket_comments[]
-  time_logs     QUAD_ticket_time_logs[]
-  pull_request  QUAD_pull_requests?     @relation(fields: [pull_request_id], references: [id], onDelete: SetNull)
+  domain             QUAD_domains            @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  cycle              QUAD_cycles?            @relation(fields: [cycle_id], references: [id], onDelete: SetNull)
+  parent_ticket      QUAD_tickets?           @relation("TicketSubtasks", fields: [parent_ticket_id], references: [id], onDelete: Cascade)
+  subtasks           QUAD_tickets[]          @relation("TicketSubtasks")
+  comments           QUAD_ticket_comments[]
+  time_logs          QUAD_ticket_time_logs[]
+  pull_request       QUAD_pull_requests?     @relation(fields: [pull_request_id], references: [id], onDelete: SetNull)
+  source_requirement QUAD_requirements?      @relation(fields: [source_requirement_id], references: [id], onDelete: SetNull)
+  source_milestone   QUAD_milestones?        @relation(fields: [source_milestone_id], references: [id], onDelete: SetNull)
 
   @@unique([domain_id, ticket_number])
   @@index([domain_id])
@@ -817,6 +826,8 @@ model QUAD_tickets {
   @@index([status])
   @@index([ticket_type])
   @@index([priority])
+  @@index([source_requirement_id])
+  @@index([source_milestone_id])
   @@map("QUAD_tickets")
 }
 
