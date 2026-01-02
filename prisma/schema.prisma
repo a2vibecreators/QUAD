@@ -405,12 +405,14 @@ model QUAD_domains {
   tickets             QUAD_tickets[]
   git_repositories    QUAD_git_repositories[]
   environments        QUAD_environments[]
-  ai_operations       QUAD_ai_operations[]
-  approvals           QUAD_approvals[]
-  file_imports        QUAD_file_imports[]
-  meetings            QUAD_meetings[]
-  rag_indexes         QUAD_rag_indexes[]
-  database_operations QUAD_database_operations[]
+  ai_operations          QUAD_ai_operations[]
+  approvals              QUAD_approvals[]
+  file_imports           QUAD_file_imports[]
+  meetings               QUAD_meetings[]
+  rag_indexes            QUAD_rag_indexes[]
+  database_operations    QUAD_database_operations[]
+  database_connections   QUAD_database_connections[]
+  anonymization_rules    QUAD_anonymization_rules[]
 
   @@index([org_id])
   @@index([parent_domain_id])
@@ -1930,6 +1932,106 @@ model QUAD_ai_provider_config {
 // PHASE 1: DATABASE AGENT
 // ============================================================================
 
+// Database Connection Configuration (per domain)
+model QUAD_database_connections {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Environment
+  env_name String @db.VarChar(20) // DEV, QA, PROD, STAGING
+
+  // Connection (encrypted/vault reference)
+  db_type    String  @db.VarChar(50) // postgres, mysql, sqlserver, oracle
+  host       String  @db.VarChar(255)
+  port       Int
+  database   String  @db.VarChar(255)
+  username   String  @db.VarChar(255)
+  vault_path String? @db.VarChar(500) // Path to password in Vaultwarden
+
+  // SSL/TLS
+  ssl_enabled Boolean @default(true)
+  ssl_mode    String? @db.VarChar(50) // require, verify-ca, verify-full
+
+  // Status
+  is_active        Boolean   @default(true)
+  last_tested_at   DateTime?
+  last_test_status String?   @db.VarChar(50) // success, failed
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id, env_name])
+  @@index([domain_id])
+  @@map("QUAD_database_connections")
+}
+
+// Anonymization Rules (define what PII fields to mask)
+model QUAD_anonymization_rules {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Target
+  table_name  String @db.VarChar(255)
+  column_name String @db.VarChar(255)
+
+  // PII Type
+  pii_type String @db.VarChar(50) // email, name, phone, ssn, address, dob, credit_card, custom
+
+  // Anonymization Strategy
+  strategy String @db.VarChar(50) // hash, faker, mask, null, custom
+  // hash: SHA256 hash
+  // faker: Generate realistic fake data (e.g., fake emails, names)
+  // mask: Partial masking (e.g., ***@gmail.com, ***-1234)
+  // null: Replace with NULL
+  // custom: Use custom_transform
+
+  // For custom strategy
+  custom_transform String? // SQL expression or function name
+
+  // Preserve referential integrity
+  preserve_uniqueness Boolean @default(true) // Same input = same output (for JOINs)
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id, table_name, column_name])
+  @@index([domain_id])
+  @@index([pii_type])
+  @@map("QUAD_anonymization_rules")
+}
+
+// Multi-stakeholder Approval for Database Operations
+model QUAD_database_approvals {
+  id           String @id @default(uuid()) @db.Uuid
+  operation_id String @db.Uuid
+
+  // Approver
+  approver_role String @db.VarChar(50) // DBA, DATA_OWNER, SECURITY, MANAGER
+  approver_id   String @db.Uuid
+
+  // Decision
+  decision    String    @db.VarChar(20) // pending, approved, rejected
+  comments    String?
+  decided_at  DateTime?
+
+  created_at DateTime @default(now())
+
+  // Relations
+  operation QUAD_database_operations @relation(fields: [operation_id], references: [id], onDelete: Cascade)
+
+  @@unique([operation_id, approver_role])
+  @@index([operation_id])
+  @@index([approver_id])
+  @@map("QUAD_database_approvals")
+}
+
 model QUAD_database_operations {
   id        String @id @default(uuid()) @db.Uuid
   domain_id String @db.Uuid
@@ -1949,24 +2051,29 @@ model QUAD_database_operations {
   anonymize_pii     Boolean  @default(false)
   pii_fields_masked String[] // List of fields that were masked
 
+  // Sample Data Generation (AI-powered)
+  sample_config Json? // { "rows_per_table": 1000, "context": "banking app", "locale": "en_US" }
+
   // Status
   status String @default("pending") @db.VarChar(50) // pending, pending_approval, in_progress, completed, failed
 
   // Approval (for sensitive operations)
-  requires_approval Boolean   @default(false)
-  approved_by       String?   @db.Uuid
-  approved_at       DateTime?
+  requires_approval   Boolean @default(false)
+  required_approvers  String[] // ["DBA", "DATA_OWNER", "SECURITY"]
+  approval_deadline   DateTime?
 
   // Execution
   started_at    DateTime?
   completed_at  DateTime?
   error_message String?
+  execution_log String? // Detailed log of operations performed
 
   initiated_by String   @db.Uuid
   created_at   DateTime @default(now())
 
   // Relations
-  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  domain    QUAD_domains              @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  approvals QUAD_database_approvals[]
 
   @@index([domain_id])
   @@index([operation_type])
