@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id: userId },
       select: {
         id: true,
-        company_id: true,
+        org_id: true,
         email: true,
         full_name: true,
         role: true,
@@ -44,8 +44,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Verify user is in same company
-    if (user.company_id !== payload.companyId) {
+    // Verify user is in same organization
+    if (user.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

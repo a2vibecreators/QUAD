@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       const user = await prisma.qUAD_users.findUnique({
         where: { id: userId }
       });
-      if (!user || user.company_id !== payload.companyId) {
+      if (!user || user.org_id !== payload.companyId) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
     }
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       const user = await prisma.qUAD_users.findUnique({
         where: { id: targetUserId }
       });
-      if (!user || user.company_id !== payload.companyId) {
+      if (!user || user.org_id !== payload.companyId) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
     }

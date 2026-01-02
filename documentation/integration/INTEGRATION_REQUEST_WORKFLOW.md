@@ -412,7 +412,7 @@ Questions? Email integrations@quadframe.work
 ```sql
 CREATE TABLE IF NOT EXISTS QUAD_integration_requests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    company_id UUID NOT NULL REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,  -- Maps to org_id in Prisma
 
     -- Request details
     tool_name TEXT NOT NULL,

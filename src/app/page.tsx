@@ -449,12 +449,12 @@ export default function Home() {
           <h2 className="text-3xl font-bold mb-8 text-center">Why QUAD?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: "4×4×4", title: "Work-Life Balance", desc: "4 hrs/day × 4 days/week = 4X efficiency with AI" },
-              { icon: "16h", title: "Productive Hours", desc: "16 focused hours beat 40 distracted hours" },
-              { icon: "4x", title: "AI Amplification", desc: "AI handles repetitive tasks, you handle creativity" },
+              { icon: "🚀", title: "100x Faster Development", desc: "From weeks to hours - AI builds working prototypes same day" },
+              { icon: "📝", title: "Documentation-First", desc: "AI agents work from docs, ensuring consistency and traceability" },
+              { icon: "🤖", title: "AI Amplification", desc: "AI handles repetitive tasks, you handle creativity and decisions" },
               { icon: "📊", title: "Adoption Matrix", desc: "Track your AI journey from Skeptic to Expert" },
               { icon: "🎯", title: "Workload Tracking", desc: "Assignments vs Completes vs Output metrics" },
-              { icon: "🔍", title: "Root Cause Analysis", desc: "Identify skill gaps, get personalized recommendations" },
+              { icon: "4×4", title: "Work-Life Balance", desc: "When efficiency improves, work less and achieve more" },
             ].map((benefit) => (
               <div key={benefit.title} className="glass-card rounded-xl p-6 text-center">
                 <div className="text-3xl font-black text-blue-400 mb-3">{benefit.icon}</div>
@@ -462,6 +462,122 @@ export default function Home() {
                 <p className="text-sm text-slate-400">{benefit.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Competitor Comparison */}
+      <section className="py-16 px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold mb-4">
+              <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+                How QUAD Compares
+              </span>
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              The only end-to-end platform: Requirement → Tickets → Code → Deploy
+            </p>
+          </div>
+
+          {/* Comparison Table */}
+          <div className="overflow-x-auto mb-8">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="text-left py-3 px-4 text-slate-400 font-medium">Feature</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Linear</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Cursor</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Devin</th>
+                  <th className="text-center py-3 px-2 text-slate-400 font-medium">Bolt</th>
+                  <th className="text-center py-3 px-2 text-green-400 font-bold">QUAD</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-300">
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">Ticket Management</td>
+                  <td className="text-center py-3 px-2 text-green-400">✓</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">AI Code Generation</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-green-400">✓</td>
+                  <td className="text-center py-3 px-2 text-green-400">✓</td>
+                  <td className="text-center py-3 px-2 text-green-400">✓</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">Meeting → Tasks</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">Deployment Recipes</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-yellow-400">~</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">DB Copy + Anonymize</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-red-400">✗</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr className="border-b border-slate-800">
+                  <td className="py-3 px-4">Human-in-the-Loop</td>
+                  <td className="text-center py-3 px-2 text-slate-500">N/A</td>
+                  <td className="text-center py-3 px-2 text-green-400">✓</td>
+                  <td className="text-center py-3 px-2 text-yellow-400">~</td>
+                  <td className="text-center py-3 px-2 text-yellow-400">~</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">✓</td>
+                </tr>
+                <tr>
+                  <td className="py-3 px-4 font-medium text-white">Pricing</td>
+                  <td className="text-center py-3 px-2 text-slate-400">$12/user</td>
+                  <td className="text-center py-3 px-2 text-slate-400">$40/user</td>
+                  <td className="text-center py-3 px-2 text-slate-400">$500/mo</td>
+                  <td className="text-center py-3 px-2 text-slate-400">$20-200</td>
+                  <td className="text-center py-3 px-2 text-green-400 font-bold">$399/mo</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Value Prop */}
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700 text-center">
+              <div className="text-2xl font-bold text-amber-400 mb-2">$399/mo</div>
+              <div className="text-sm text-slate-400">Flat pricing, 10 users</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700 text-center">
+              <div className="text-2xl font-bold text-green-400 mb-2">Replaces ~$380</div>
+              <div className="text-sm text-slate-400">Linear + Cursor + Tools</div>
+            </div>
+            <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700 text-center">
+              <div className="text-2xl font-bold text-purple-400 mb-2">~$24K/yr</div>
+              <div className="text-sm text-slate-400">Saved in engineering time</div>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              href="/compare"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors"
+            >
+              View Full Comparison
+              <span>→</span>
+            </Link>
           </div>
         </div>
       </section>
@@ -744,41 +860,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 4-4-4 Principle Section */}
-      <section className="py-16 px-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 rounded-2xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-emerald-300 mb-6">The 4-4-4 Principle</h2>
-            <div className="flex justify-center gap-8 mb-6">
-              <div className="text-center">
-                <div className="text-5xl font-black text-emerald-400">4</div>
-                <div className="text-sm text-slate-400 mt-1">hrs/day</div>
-              </div>
-              <div className="text-3xl text-slate-600 self-center">×</div>
-              <div className="text-center">
-                <div className="text-5xl font-black text-emerald-400">4</div>
-                <div className="text-sm text-slate-400 mt-1">days/wk</div>
-              </div>
-              <div className="text-3xl text-slate-600 self-center">=</div>
-              <div className="text-center">
-                <div className="text-5xl font-black text-emerald-400">4X</div>
-                <div className="text-sm text-slate-400 mt-1">efficiency</div>
-              </div>
-            </div>
-            <p className="text-slate-300 max-w-xl mx-auto">
-              Work smarter, not longer. With AI handling repetitive tasks, 16 focused hours
-              beat 40 distracted hours. QUAD enables sustainable productivity.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="py-16 px-8 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Workflow?</h2>
           <p className="text-slate-400 mb-8">
-            Work 4 hours/day, 4 days/week, achieve 4X efficiency. Start with Case Studies to see QUAD in action across 5 domains.
+            Go from weeks of documentation to hours of working software. Start with Case Studies to see QUAD in action across 5 domains.
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Link
@@ -799,6 +886,27 @@ export default function Home() {
             >
               ✉️ Contact: suman.addanki@gmail.com
             </a>
+          </div>
+        </div>
+      </section>
+
+      {/* 4-4-4 Principle - Secondary Note */}
+      <section className="py-8 px-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 text-center">
+            <p className="text-sm text-slate-400 mb-2">
+              <span className="text-emerald-400 font-semibold">Bonus:</span> When AI handles the repetitive work...
+            </p>
+            <div className="flex items-center justify-center gap-3 text-emerald-400">
+              <span className="text-lg font-bold">4 hrs/day</span>
+              <span className="text-slate-600">×</span>
+              <span className="text-lg font-bold">4 days/wk</span>
+              <span className="text-slate-600">=</span>
+              <span className="text-lg font-bold">4X efficiency</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              Work-life balance becomes possible when you're not fighting inefficiency
+            </p>
           </div>
         </div>
       </section>

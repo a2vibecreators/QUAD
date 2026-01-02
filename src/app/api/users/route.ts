@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     const where: Record<string, unknown> = {
-      company_id: payload.companyId
+      org_id: payload.companyId
     };
 
     if (role) {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.qUAD_users.create({
       data: {
-        company_id: payload.companyId,
+        org_id: payload.companyId,
         email,
         password_hash,
         full_name,

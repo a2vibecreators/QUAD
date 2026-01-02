@@ -85,7 +85,7 @@ Create a new user and company.
 ```
 
 **Notes:**
-- Creates company with default 6 roles (ADMIN, MANAGER, TECH_LEAD, DEVELOPER, QA, OBSERVER)
+- Creates organization with default 6 roles (ADMIN, MANAGER, TECH_LEAD, DEVELOPER, QA, OBSERVER)
 - User is assigned ADMIN role automatically
 - Creates adoption matrix entry for user
 
@@ -134,11 +134,13 @@ End user session.
 
 ---
 
-## Companies
+## Organizations (Companies API)
+
+> **Note:** The database table was renamed from `QUAD_companies` to `QUAD_organizations`. The API endpoints remain as `/api/companies` for backward compatibility. The `company_id` field in API responses maps to `org_id` in Prisma/code.
 
 ### GET /api/companies
 
-List all companies (ADMIN only).
+List all organizations (ADMIN only).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -162,7 +164,7 @@ List all companies (ADMIN only).
 
 ### GET /api/companies/{id}
 
-Get company by ID.
+Get organization by ID.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -184,7 +186,7 @@ Get company by ID.
 
 ### PUT /api/companies/{id}
 
-Update company details (ADMIN only).
+Update organization details (ADMIN only).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -211,7 +213,7 @@ Update company details (ADMIN only).
 
 ### GET /api/users
 
-List all users in company.
+List all users in organization.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -301,7 +303,7 @@ Delete user (ADMIN only).
 
 ### GET /api/roles
 
-List all roles in company.
+List all roles in organization.
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -387,7 +389,7 @@ Delete role (ADMIN only). Cannot delete system roles or roles with users.
 
 ### GET /api/domains
 
-List all domains in company (hierarchical).
+List all domains in organization (hierarchical).
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -717,7 +719,7 @@ Remove member from circle.
 
 ### GET /api/adoption-matrix
 
-List all adoption matrices in company.
+List all adoption matrices in organization.
 
 ---
 

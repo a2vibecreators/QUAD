@@ -1,13 +1,15 @@
 /**
- * GET /api/companies - List all companies
- * POST /api/companies - Create a new company
+ * GET /api/companies - List all organizations (legacy endpoint)
+ * POST /api/companies - Create a new organization (legacy endpoint)
+ *
+ * NOTE: This is a legacy endpoint. Use /api/organizations instead.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 
-// GET: List all companies (admin only)
+// GET: List all organizations (admin only)
 export async function GET(request: NextRequest) {
   try {
     // Verify authentication
@@ -24,8 +26,8 @@ export async function GET(request: NextRequest) {
 
     // Check if user is admin
     if (payload.role !== 'ADMIN') {
-      // Non-admins can only see their own company
-      const company = await prisma.qUAD_companies.findUnique({
+      // Non-admins can only see their own organization
+      const organization = await prisma.qUAD_organizations.findUnique({
         where: { id: payload.companyId },
         include: {
           _count: {
@@ -34,11 +36,11 @@ export async function GET(request: NextRequest) {
         }
       });
 
-      return NextResponse.json({ companies: company ? [company] : [] });
+      return NextResponse.json({ companies: organization ? [organization] : [] });
     }
 
-    // Admins can see all companies
-    const companies = await prisma.qUAD_companies.findMany({
+    // Admins can see all organizations
+    const organizations = await prisma.qUAD_organizations.findMany({
       include: {
         _count: {
           select: { users: true, domains: true }
@@ -47,9 +49,9 @@ export async function GET(request: NextRequest) {
       orderBy: { created_at: 'desc' }
     });
 
-    return NextResponse.json({ companies });
+    return NextResponse.json({ companies: organizations });
   } catch (error) {
-    console.error('Get companies error:', error);
+    console.error('Get organizations error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST: Create a new company
+// POST: Create a new organization
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -71,20 +73,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if company with same admin email exists
-    const existing = await prisma.qUAD_companies.findUnique({
-      where: { admin_email }
+    // Note: admin_email is not unique - sub-orgs can share admin
+    // Check for duplicate organization name instead
+    const existing = await prisma.qUAD_organizations.findFirst({
+      where: { name, admin_email }
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: 'Company with this admin email already exists' },
+        { error: 'Organization with this name and admin email already exists' },
         { status: 409 }
       );
     }
 
-    // Create company
-    const company = await prisma.qUAD_companies.create({
+    // Create organization
+    const organization = await prisma.qUAD_organizations.create({
       data: {
         name,
         admin_email,
@@ -92,9 +95,9 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(company, { status: 201 });
+    return NextResponse.json(organization, { status: 201 });
   } catch (error) {
-    console.error('Create company error:', error);
+    console.error('Create organization error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

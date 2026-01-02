@@ -101,7 +101,7 @@ npm run dev
    - ✅ Success screen appears
    - ✅ Database check:
      ```sql
-     SELECT name, admin_email, size FROM QUAD_companies WHERE admin_email = 'admin@testcompany.com';
+     SELECT name, admin_email, size FROM QUAD_organizations WHERE admin_email = 'admin@testcompany.com';
      ```
      Should return: `Test Company - Okta | admin@testcompany.com | enterprise`
 
@@ -209,8 +209,9 @@ AZURE_AD_TENANT_ID=common
 
 ```sql
 -- Check both OAuth providers created separate users
+-- Note: company_id column maps to org_id in Prisma
 SELECT email, oauth_provider FROM QUAD_users
-WHERE company_id = (SELECT id FROM QUAD_companies WHERE admin_email = 'admin@testcompany.com');
+WHERE company_id = (SELECT id FROM QUAD_organizations WHERE admin_email = 'admin@testcompany.com');
 
 -- Expected: TWO rows (if different emails) or ONE row (if same email used)
 ```
@@ -351,8 +352,8 @@ Before marking auth as "complete", verify:
 - [ ] Sign out button works
 
 ### Database
-- [ ] `QUAD_companies` table populated
-- [ ] `QUAD_users` table populated
+- [ ] `QUAD_organizations` table populated
+- [ ] `QUAD_users` table populated (company_id maps to org_id in Prisma)
 - [ ] `oauth_provider` column set correctly
 - [ ] User count enforced for free tier
 
@@ -403,11 +404,11 @@ npm run dev
 
 **Fix:**
 ```sql
--- Verify company size
-SELECT name, size FROM QUAD_companies;
+-- Verify organization size
+SELECT name, size FROM QUAD_organizations;
 
 -- Update if needed
-UPDATE QUAD_companies SET size = 'startup' WHERE admin_email = 'test@example.com';
+UPDATE QUAD_organizations SET size = 'startup' WHERE admin_email = 'test@example.com';
 ```
 
 ---

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id: resourceId },
       include: {
         domain: {
-          select: { id: true, name: true, company_id: true }
+          select: { id: true, name: true, org_id: true }
         },
         attributes: true
       }
@@ -43,8 +43,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    // Verify resource belongs to user's company
-    if (resource.domain.company_id !== payload.companyId) {
+    // Verify resource belongs to user's organization
+    if (resource.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const existing = await prisma.qUAD_domain_resources.findUnique({
       where: { id: resourceId },
       include: {
-        domain: { select: { company_id: true } }
+        domain: { select: { org_id: true } }
       }
     });
 
@@ -100,7 +100,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -191,7 +191,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const existing = await prisma.qUAD_domain_resources.findUnique({
       where: { id: resourceId },
       include: {
-        domain: { select: { company_id: true } }
+        domain: { select: { org_id: true } }
       }
     });
 
@@ -199,7 +199,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Resource not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

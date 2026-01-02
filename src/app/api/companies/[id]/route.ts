@@ -1,7 +1,9 @@
 /**
- * GET /api/companies/[id] - Get company by ID
- * PUT /api/companies/[id] - Update company
- * DELETE /api/companies/[id] - Delete company
+ * GET /api/companies/[id] - Get organization by ID (legacy endpoint)
+ * PUT /api/companies/[id] - Update organization (legacy endpoint)
+ * DELETE /api/companies/[id] - Delete organization (legacy endpoint)
+ *
+ * NOTE: This is a legacy endpoint. Use /api/organizations instead.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,7 +14,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET: Get company by ID
+// GET: Get organization by ID
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -29,12 +31,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Non-admins can only view their own company
+    // Non-admins can only view their own organization
     if (payload.role !== 'ADMIN' && payload.companyId !== id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const company = await prisma.qUAD_companies.findUnique({
+    const organization = await prisma.qUAD_organizations.findUnique({
       where: { id },
       include: {
         users: {
@@ -59,13 +61,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     });
 
-    if (!company) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+    if (!organization) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    return NextResponse.json(company);
+    return NextResponse.json(organization);
   } catch (error) {
-    console.error('Get company error:', error);
+    console.error('Get organization error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT: Update company
+// PUT: Update organization
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -90,7 +92,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Only admins can update companies
+    // Only admins can update organizations
     if (payload.role !== 'ADMIN' && payload.companyId !== id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
@@ -98,17 +100,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const { name, size } = body;
 
-    // Check if company exists
-    const existing = await prisma.qUAD_companies.findUnique({
+    // Check if organization exists
+    const existing = await prisma.qUAD_organizations.findUnique({
       where: { id }
     });
 
     if (!existing) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Update company
-    const company = await prisma.qUAD_companies.update({
+    // Update organization
+    const organization = await prisma.qUAD_organizations.update({
       where: { id },
       data: {
         ...(name && { name }),
@@ -116,9 +118,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     });
 
-    return NextResponse.json(company);
+    return NextResponse.json(organization);
   } catch (error) {
-    console.error('Update company error:', error);
+    console.error('Update organization error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -126,7 +128,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE: Delete company
+// DELETE: Delete organization
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -143,28 +145,28 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Only admins can delete companies
+    // Only admins can delete organizations
     if (payload.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check if company exists
-    const existing = await prisma.qUAD_companies.findUnique({
+    // Check if organization exists
+    const existing = await prisma.qUAD_organizations.findUnique({
       where: { id }
     });
 
     if (!existing) {
-      return NextResponse.json({ error: 'Company not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // Delete company (cascade will delete users, domains, etc.)
-    await prisma.qUAD_companies.delete({
+    // Delete organization (cascade will delete users, domains, etc.)
+    await prisma.qUAD_organizations.delete({
       where: { id }
     });
 
-    return NextResponse.json({ message: 'Company deleted successfully' });
+    return NextResponse.json({ message: 'Organization deleted successfully' });
   } catch (error) {
-    console.error('Delete company error:', error);
+    console.error('Delete organization error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

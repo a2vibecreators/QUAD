@@ -456,28 +456,6 @@ export default function QUADPitch() {
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-8 border border-blue-500/30 text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Ready to Transform?</h2>
-          <p className="text-slate-400 mb-6 max-w-2xl mx-auto">
-            Start your QUAD journey today. Configure your adoption level, enable AI agents,
-            and see immediate improvements in your development workflow.
-          </p>
-          <div className="flex justify-center gap-4">
-            <Link
-              href="/configure"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Configure QUAD
-            </Link>
-            <Link
-              href="/demo"
-              className="px-6 py-3 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-            >
-              See Live Demo
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

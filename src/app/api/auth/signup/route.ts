@@ -58,8 +58,15 @@ export async function POST(request: NextRequest) {
     interface UserRow { id: string; company_id: string; email: string; role: string; full_name: string; is_active: boolean; }
     const user = userResult.rows[0] as UserRow;
 
-    // Generate JWT token
-    const token = generateToken(user);
+    // Generate JWT token - map company_id to org_id for QuadUser type
+    const token = generateToken({
+      id: user.id,
+      org_id: user.company_id,  // SQL uses company_id column
+      email: user.email,
+      role: user.role,
+      full_name: user.full_name,
+      is_active: user.is_active,
+    });
 
     // Create session
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null;

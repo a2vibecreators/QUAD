@@ -294,11 +294,12 @@ Redirect URI: http://localhost:3003/api/auth/callback/{provider}
 
 **Solution:**
 ```sql
--- QUAD_ADMIN must create company first:
-INSERT INTO quad_companies (name, admin_email)
+-- QUAD_ADMIN must create organization first:
+INSERT INTO QUAD_organizations (name, admin_email)
 VALUES ('Mass Mutual', 'admin@massmutual.com');
 
 -- Then users with @massmutual.com can login via SSO
+-- Note: company_id column in QUAD_users maps to org_id in Prisma
 ```
 
 ### Error: "Invalid Client Secret"

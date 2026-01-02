@@ -186,28 +186,13 @@ export default function SitemapPage() {
             </div>
           </div>
 
-          {/* 4-4-4 Principle */}
-          <div className="mt-6 glass-card rounded-xl p-6 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-            <h2 className="text-xl font-bold text-emerald-300 mb-4">The 4-4-4 Principle</h2>
-            <div className="flex justify-center gap-6 mb-4">
-              <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4</div>
-                <div className="text-sm text-slate-400">hours/day</div>
-              </div>
-              <div className="text-2xl text-slate-600 self-center">×</div>
-              <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4</div>
-                <div className="text-sm text-slate-400">days/week</div>
-              </div>
-              <div className="text-2xl text-slate-600 self-center">=</div>
-              <div className="text-center">
-                <div className="text-3xl font-black text-emerald-400">4X</div>
-                <div className="text-sm text-slate-400">efficiency</div>
-              </div>
+          {/* 4-4-4 Principle - Secondary */}
+          <div className="mt-6 glass-card rounded-xl p-4 border border-slate-700">
+            <div className="flex items-center justify-center gap-4 text-sm">
+              <span className="text-slate-500">Bonus:</span>
+              <span className="text-emerald-400 font-medium">4 hrs/day × 4 days/wk = 4X efficiency</span>
+              <span className="text-slate-500">when AI handles the routine</span>
             </div>
-            <p className="text-center text-slate-400 text-sm">
-              Work smarter, not longer. Achieve more while living more.
-            </p>
           </div>
 
           {/* Support Link */}

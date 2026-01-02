@@ -22,8 +22,8 @@
 ## Schema Overview
 
 ```
-QUAD_companies                               ← Top-level organizations
-  ├─ QUAD_roles                              ← Company-specific roles with Q-U-A-D participation
+QUAD_organizations                           ← Top-level organizations
+  ├─ QUAD_roles                              ← Organization-specific roles with Q-U-A-D participation
   │     └─ QUAD_users                        ← User accounts (linked to role)
   │           ├─ QUAD_user_sessions          ← Active login sessions
   │           ├─ QUAD_domain_members         ← User roles per domain
@@ -44,12 +44,14 @@ QUAD_companies                               ← Top-level organizations
 
 ## Core Tables
 
-### 1. QUAD_companies
+### 1. QUAD_organizations
 
 **Purpose:** Top-level customer organizations
 
+> **Note:** The database table column `company_id` is mapped to `org_id` in Prisma for code clarity. API responses may still use `company_id` for backward compatibility.
+
 ```sql
-CREATE TABLE QUAD_companies (
+CREATE TABLE QUAD_organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name VARCHAR(255) NOT NULL,
   admin_email VARCHAR(255) NOT NULL UNIQUE,
@@ -60,18 +62,18 @@ CREATE TABLE QUAD_companies (
 );
 ```
 
-**Auto-Init Trigger:** When a company is created, 6 default roles are automatically created.
+**Auto-Init Trigger:** When an organization is created, 6 default roles are automatically created.
 
 ---
 
 ### 2. QUAD_roles ✨ NEW
 
-**Purpose:** Company-specific role definitions with Q-U-A-D stage participation
+**Purpose:** Organization-specific role definitions with Q-U-A-D stage participation
 
 ```sql
 CREATE TABLE QUAD_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+  company_id UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,  -- Maps to org_id in Prisma
 
   -- Role identification
   role_code VARCHAR(50) NOT NULL,      -- 'ADMIN', 'MANAGER', 'DEVELOPER', etc.
@@ -133,7 +135,7 @@ CREATE TABLE QUAD_roles (
 ```sql
 CREATE TABLE QUAD_users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+  company_id UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,  -- Maps to org_id in Prisma
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role_id UUID REFERENCES QUAD_roles(id) ON DELETE SET NULL,
@@ -176,7 +178,7 @@ CREATE TABLE QUAD_user_sessions (
 ```sql
 CREATE TABLE QUAD_domains (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID NOT NULL REFERENCES QUAD_companies(id) ON DELETE CASCADE,
+  company_id UUID NOT NULL REFERENCES QUAD_organizations(id) ON DELETE CASCADE,  -- Maps to org_id in Prisma
   name VARCHAR(255) NOT NULL,
   parent_domain_id UUID REFERENCES QUAD_domains(id) ON DELETE CASCADE,
   domain_type VARCHAR(50),   -- 'healthcare', 'finance', 'e_commerce', 'saas'
@@ -486,15 +488,15 @@ Applied to all tables with `updated_at` column via triggers.
 
 ## Auto-Init Triggers
 
-### QUAD_init_company_roles()
+### QUAD_init_org_roles()
 
-**Purpose:** Auto-create 6 default roles when company is created
+**Purpose:** Auto-create 6 default roles when organization is created
 
 ```sql
-CREATE TRIGGER trg_companies_init_roles
-  AFTER INSERT ON QUAD_companies
+CREATE TRIGGER trg_organizations_init_roles
+  AFTER INSERT ON QUAD_organizations
   FOR EACH ROW
-  EXECUTE FUNCTION QUAD_init_company_roles();
+  EXECUTE FUNCTION QUAD_init_org_roles();
 ```
 
 Creates: ADMIN, MANAGER, TECH_LEAD, DEVELOPER, QA, OBSERVER
@@ -588,7 +590,7 @@ SELECT
   END as adoption_label
 FROM QUAD_users u
 JOIN QUAD_adoption_matrix am ON am.user_id = u.id
-WHERE u.company_id = '{company-id}';
+WHERE u.company_id = '{org-id}';  -- company_id column maps to org_id in Prisma
 ```
 
 ---

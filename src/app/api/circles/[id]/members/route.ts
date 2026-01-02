@@ -32,10 +32,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Verify circle exists and belongs to user's company
     const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
-      include: { domain: { select: { company_id: true } } }
+      include: { domain: { select: { org_id: true } } }
     });
 
-    if (!circle || circle.domain.company_id !== payload.companyId) {
+    if (!circle || circle.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
@@ -93,10 +93,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Verify circle exists and belongs to user's company
     const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
-      include: { domain: { select: { company_id: true } } }
+      include: { domain: { select: { org_id: true } } }
     });
 
-    if (!circle || circle.domain.company_id !== payload.companyId) {
+    if (!circle || circle.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       where: { id: user_id }
     });
 
-    if (!user || user.company_id !== payload.companyId) {
+    if (!user || user.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -192,10 +192,10 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // Verify circle exists and belongs to user's company
     const circle = await prisma.qUAD_circles.findUnique({
       where: { id: circleId },
-      include: { domain: { select: { company_id: true } } }
+      include: { domain: { select: { org_id: true } } }
     });
 
-    if (!circle || circle.domain.company_id !== payload.companyId) {
+    if (!circle || circle.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 

@@ -38,17 +38,17 @@ export async function GET(request: NextRequest) {
       const user = await prisma.qUAD_users.findUnique({
         where: { id: userId }
       });
-      if (!user || user.company_id !== payload.companyId) {
+      if (!user || user.org_id !== payload.companyId) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
       where.user_id = userId;
     } else {
-      // Get all users in company
-      const companyUsers = await prisma.qUAD_users.findMany({
-        where: { company_id: payload.companyId },
+      // Get all users in organization
+      const orgUsers = await prisma.qUAD_users.findMany({
+        where: { org_id: payload.companyId },
         select: { id: true }
       });
-      where.user_id = { in: companyUsers.map(u => u.id) };
+      where.user_id = { in: orgUsers.map(u => u.id) };
     }
 
     if (domainId) where.domain_id = domainId;
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       where: { id: user_id }
     });
 
-    if (!user || user.company_id !== payload.companyId) {
+    if (!user || user.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       const domain = await prisma.qUAD_domains.findUnique({
         where: { id: domain_id }
       });
-      if (!domain || domain.company_id !== payload.companyId) {
+      if (!domain || domain.org_id !== payload.companyId) {
         return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
       }
     }

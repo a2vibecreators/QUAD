@@ -37,7 +37,8 @@
 
 **Company Profile:**
 ```sql
-INSERT INTO QUAD_companies (name, admin_email, size, adoption_level, estimation_preset)
+-- Note: company_id column maps to org_id in Prisma code
+INSERT INTO QUAD_organizations (name, admin_email, size, adoption_level, estimation_preset)
 VALUES (
   'Massachusetts Mutual Life Insurance',
   'demo@massmutual.com',
@@ -49,7 +50,8 @@ VALUES (
 
 **Enabled Integrations (Demo):**
 ```sql
-INSERT INTO QUAD_company_integrations (company_id, integration_id, config)
+-- Note: company_id column maps to org_id in Prisma code
+INSERT INTO QUAD_org_integrations (company_id, integration_id, config)
 VALUES
   -- SSO (Okta)
   ('mass-mutual-uuid', 'okta', '{

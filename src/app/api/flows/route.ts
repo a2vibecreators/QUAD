@@ -32,12 +32,12 @@ export async function GET(request: NextRequest) {
     const circleNumber = searchParams.get('circle_number');
     const flowType = searchParams.get('flow_type');
 
-    // Build where clause - filter by company's domains
-    const companyDomains = await prisma.qUAD_domains.findMany({
-      where: { company_id: payload.companyId },
+    // Build where clause - filter by organization's domains
+    const orgDomains = await prisma.qUAD_domains.findMany({
+      where: { org_id: payload.companyId },
       select: { id: true }
     });
-    const domainIds = companyDomains.map(d => d.id);
+    const domainIds = orgDomains.map(d => d.id);
 
     const where: Record<string, unknown> = {
       domain_id: domainId ? domainId : { in: domainIds }
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       where: { id: domain_id }
     });
 
-    if (!domain || domain.company_id !== payload.companyId) {
+    if (!domain || domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 

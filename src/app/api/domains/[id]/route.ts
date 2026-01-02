@@ -29,6 +29,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Check if admin wants to include deleted domains
+    const { searchParams } = new URL(request.url);
+    const includeDeleted = searchParams.get('include_deleted') === 'true' && payload.role === 'ADMIN';
+
     const domain = await prisma.qUAD_domains.findUnique({
       where: { id },
       include: {
@@ -36,10 +40,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           select: { id: true, name: true, path: true }
         },
         sub_domains: {
+          where: includeDeleted ? {} : { is_deleted: false },
           select: {
             id: true,
             name: true,
             domain_type: true,
+            is_deleted: true,
             _count: { select: { members: true, flows: true } }
           }
         },
@@ -66,6 +72,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             is_active: true
           }
         },
+        creator: {
+          select: { id: true, email: true, full_name: true }
+        },
         _count: {
           select: {
             members: true,
@@ -82,8 +91,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    // Verify domain belongs to user's company
-    if (domain.company_id !== payload.companyId) {
+    // Don't show deleted domains unless admin requested
+    if (domain.is_deleted && !includeDeleted) {
+      return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
+    }
+
+    // Verify domain belongs to user's organization
+    if (domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -128,7 +142,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    if (existing.company_id !== payload.companyId) {
+    if (existing.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -144,7 +158,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const parentDomain = await prisma.qUAD_domains.findUnique({
           where: { id: parent_domain_id }
         });
-        if (parentDomain && parentDomain.company_id === payload.companyId) {
+        if (parentDomain && parentDomain.org_id === payload.companyId) {
           newPath = `${parentDomain.path || ''}/${name || existing.name}`;
         }
       }
@@ -175,7 +189,35 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE: Delete domain
+// Helper: Recursively soft-delete domain and all sub-domains
+async function softDeleteDomainTree(domainId: string, deletedBy: string): Promise<number> {
+  // Get all sub-domains first
+  const subDomains = await prisma.qUAD_domains.findMany({
+    where: { parent_domain_id: domainId, is_deleted: false },
+    select: { id: true }
+  });
+
+  let deletedCount = 0;
+
+  // Recursively soft-delete sub-domains
+  for (const subDomain of subDomains) {
+    deletedCount += await softDeleteDomainTree(subDomain.id, deletedBy);
+  }
+
+  // Soft-delete this domain
+  await prisma.qUAD_domains.update({
+    where: { id: domainId },
+    data: {
+      is_deleted: true,
+      deleted_at: new Date(),
+      deleted_by: deletedBy
+    }
+  });
+
+  return deletedCount + 1;
+}
+
+// DELETE: Soft-delete domain (only creator/DOMAIN_ADMIN or ORG_ADMIN can delete)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -192,15 +234,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Only admins can delete domains
-    if (payload.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     // Check if domain exists
     const existing = await prisma.qUAD_domains.findUnique({
       where: { id },
       include: {
+        creator: { select: { id: true, email: true } },
         _count: { select: { sub_domains: true } }
       }
     });
@@ -209,25 +247,121 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    if (existing.company_id !== payload.companyId) {
+    if (existing.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Warn if domain has sub-domains
-    if (existing._count.sub_domains > 0) {
+    // Already deleted?
+    if (existing.is_deleted) {
+      return NextResponse.json({ error: 'Domain already deleted' }, { status: 400 });
+    }
+
+    // Permission check: Only ORG_ADMIN or the creator (DOMAIN_ADMIN) can delete
+    const isOrgAdmin = payload.role === 'ADMIN';
+    const isCreator = existing.created_by === payload.userId;
+
+    if (!isOrgAdmin && !isCreator) {
       return NextResponse.json(
-        { error: 'Cannot delete domain with sub-domains. Delete sub-domains first.' },
+        { error: 'Forbidden - Only the domain creator or organization admin can delete this domain' },
+        { status: 403 }
+      );
+    }
+
+    // Check for cascade deletion confirmation
+    const { searchParams } = new URL(request.url);
+    const cascade = searchParams.get('cascade') === 'true';
+
+    if (existing._count.sub_domains > 0 && !cascade) {
+      return NextResponse.json(
+        {
+          error: 'Domain has sub-domains',
+          sub_domain_count: existing._count.sub_domains,
+          message: 'Add ?cascade=true to delete this domain and all sub-domains'
+        },
         { status: 400 }
       );
     }
 
-    await prisma.qUAD_domains.delete({
+    // Soft-delete domain and all sub-domains
+    const deletedCount = await softDeleteDomainTree(id, payload.userId);
+
+    return NextResponse.json({
+      message: 'Domain soft-deleted successfully',
+      deleted_count: deletedCount,
+      can_restore: true,
+      restore_instructions: 'Contact admin to restore deleted domains'
+    });
+  } catch (error) {
+    console.error('Delete domain error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: Restore soft-deleted domain (admin only)
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.substring(7);
+    const payload = verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Only admins can restore deleted domains
+    if (payload.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { action } = body;
+
+    if (action !== 'restore') {
+      return NextResponse.json({ error: 'Invalid action. Use { "action": "restore" }' }, { status: 400 });
+    }
+
+    // Check if domain exists and is deleted
+    const existing = await prisma.qUAD_domains.findUnique({
       where: { id }
     });
 
-    return NextResponse.json({ message: 'Domain deleted successfully' });
+    if (!existing) {
+      return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
+    }
+
+    if (existing.org_id !== payload.companyId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (!existing.is_deleted) {
+      return NextResponse.json({ error: 'Domain is not deleted' }, { status: 400 });
+    }
+
+    // Restore domain
+    const domain = await prisma.qUAD_domains.update({
+      where: { id },
+      data: {
+        is_deleted: false,
+        deleted_at: null,
+        deleted_by: null
+      }
+    });
+
+    return NextResponse.json({
+      message: 'Domain restored successfully',
+      domain
+    });
   } catch (error) {
-    console.error('Delete domain error:', error);
+    console.error('Restore domain error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

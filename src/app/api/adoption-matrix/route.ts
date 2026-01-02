@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Get all users with their adoption matrix
     const users = await prisma.qUAD_users.findMany({
-      where: { company_id: payload.companyId },
+      where: { org_id: payload.companyId },
       select: {
         id: true,
         email: true,
@@ -141,7 +141,7 @@ export async function PUT(request: NextRequest) {
       include: { adoption_matrix: true }
     });
 
-    if (!user || user.company_id !== payload.companyId) {
+    if (!user || user.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 

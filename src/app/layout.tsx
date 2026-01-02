@@ -5,6 +5,8 @@ import { MethodologyProvider } from "@/context/MethodologyContext";
 import MethodologySelector from "@/components/MethodologySelector";
 import { SearchProvider, SearchButton } from "@/components/SearchProvider";
 import SessionProvider from "@/components/SessionProvider";
+import { DomainProvider } from "@/contexts/DomainContext";
+import DomainSelector from "@/components/DomainSelector";
 
 export const metadata: Metadata = {
   title: "QUAD Framework - Circle of Functions",
@@ -29,10 +31,11 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased min-h-screen bg-slate-900">
         <SessionProvider>
+        <DomainProvider>
         <SearchProvider>
         <MethodologyProvider>
           {/* Navigation */}
-          <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+          <nav className="fixed top-0 left-0 right-0 z-[60] bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex items-center justify-between h-16">
                 <div className="flex items-center gap-3">
@@ -66,6 +69,10 @@ export default function RootLayout({
                   <div className="border-l border-slate-700 pl-4">
                     <MethodologySelector />
                   </div>
+                  {/* Domain Selector */}
+                  <div className="border-l border-slate-700 pl-4">
+                    <DomainSelector />
+                  </div>
                 </div>
               </div>
             </div>
@@ -96,6 +103,7 @@ export default function RootLayout({
           </footer>
         </MethodologyProvider>
         </SearchProvider>
+        </DomainProvider>
         </SessionProvider>
       </body>
     </html>

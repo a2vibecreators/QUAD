@@ -48,7 +48,7 @@ QUAD Platform uses an intelligent session management system that preserves conte
 ## December 31, 2025 - OAuth SSO Implementation
 
 **What was done:**
-- Created 6 QUAD_ database tables (companies, users, integrations, etc.)
+- Created 6 QUAD_ database tables (organizations, users, integrations, etc.)
 - Implemented NextAuth.js with 6 SSO providers (Okta, Azure AD, Google, GitHub, Auth0, OIDC)
 - Built authentication flow with free tier enforcement (5 users)
 - Created documentation structure (similar to NutriNine)
@@ -202,7 +202,8 @@ Before responding, read these files to restore session context:
 
 **Database Location:**
 - Shared with NutriNine: `/Users/semostudio/git/a2vibecreators/nutrinine/nutrinine-database/`
-- Tables: `QUAD_companies`, `QUAD_users`, `QUAD_company_integrations`, etc.
+- Tables: `QUAD_organizations`, `QUAD_users`, `QUAD_org_integrations`, etc.
+- Note: `company_id` column in tables maps to `org_id` in Prisma for code clarity
 
 ## After Restoring Context
 
@@ -299,6 +300,333 @@ Before responding, read these files to restore session context:
 | **New Developer** | ❌ Read all docs manually | ✅ One command onboarding |
 | **Consistency** | ❌ Different agents work differently | ✅ Rules enforced |
 | **History** | ❌ Lost in conversation | ✅ Persisted in files |
+
+---
+
+## AI API Session Management (Claude is Stateless)
+
+### The Problem
+
+Claude API (and all LLM APIs) are **stateless HTTP calls**:
+- Each request is independent
+- No memory of previous conversations
+- We must send context with EVERY call
+
+```
+Without context management:
+├── Request 1: "Analyze ticket PROJ-123"
+│   └── Claude: Analyzes and responds
+├── Request 2: "What did you suggest?"
+│   └── Claude: "I don't know what you're referring to"
+```
+
+### The Solution: Database-Backed Context
+
+QUAD stores AI context in the database and loads it for each request:
+
+```
+With QUAD context management:
+├── User asks: "Analyze ticket PROJ-123"
+│   ├── Load user's recent context from QUAD_ai_contexts
+│   ├── Load ticket details
+│   ├── Build system prompt + context + question
+│   ├── Call Claude API
+│   ├── Save response to QUAD_ai_contexts
+│   └── Return response to user
+│
+├── User asks: "What did you suggest?"
+│   ├── Load previous context (from QUAD_ai_contexts)
+│   ├── Claude sees: "You previously analyzed PROJ-123 and suggested..."
+│   └── Claude responds with relevant history
+```
+
+### Database Tables
+
+**QUAD_ai_contexts** - Stores conversation and activity context:
+```sql
+- user_id: Who this context belongs to
+- domain_id: Which project (optional)
+- lifecycle: core | long_term | short_term | momentary
+- context_type: conversation | activity | decision | preference
+- summary: Brief summary
+- full_content: Full details
+- entity_type: ticket | sprint | requirement | pr
+- entity_id: Link to specific entity
+- expires_at: Auto-cleanup based on lifecycle
+```
+
+**QUAD_ai_context_relationships** - Links related contexts:
+```sql
+- source_context_id / target_context_id
+- relationship_type: follow_up | related_to | caused_by
+- relationship_strength: 0.00 to 1.00
+```
+
+**QUAD_user_activity_summaries** - Pre-computed activity for fast loading:
+```sql
+- user_id: Who
+- period_type: daily | weekly
+- tickets_created/completed, prs_created/reviewed, deployments
+- ai_summary: AI-generated summary of the period
+- recent_ticket_ids, recent_pr_ids: Quick reference
+```
+
+### Context Loading on Login
+
+When a user logs in, QUAD loads their recent context:
+
+```typescript
+async function loadUserContext(userId: string) {
+  // 1. Load activity summaries (last 7 days)
+  const summaries = await prisma.QUAD_user_activity_summaries.findMany({
+    where: {
+      user_id: userId,
+      period_start: { gte: sevenDaysAgo }
+    }
+  });
+
+  // 2. Load recent conversations (short_term + core)
+  const contexts = await prisma.QUAD_ai_contexts.findMany({
+    where: {
+      user_id: userId,
+      lifecycle: { in: ['core', 'short_term'] },
+      OR: [
+        { expires_at: null },
+        { expires_at: { gt: new Date() } }
+      ]
+    },
+    orderBy: { created_at: 'desc' },
+    take: 20
+  });
+
+  // 3. Load recent tickets
+  const recentTickets = await prisma.QUAD_tickets.findMany({
+    where: { assigned_to: userId },
+    orderBy: { updated_at: 'desc' },
+    take: 5
+  });
+
+  return { summaries, contexts, recentTickets };
+}
+```
+
+### Context-Aware AI Calls
+
+When calling Claude, include loaded context:
+
+```typescript
+async function callClaudeWithContext(
+  userId: string,
+  domainId: string,
+  userQuestion: string,
+  entityContext?: { type: string; id: string }
+) {
+  // 1. Load user context
+  const userContext = await loadUserContext(userId);
+
+  // 2. Build context summary
+  const contextSummary = buildContextSummary(userContext);
+
+  // 3. Build prompt
+  const systemPrompt = `
+    You are the QUAD AI assistant.
+
+    User Context:
+    ${contextSummary}
+
+    ${entityContext ? `Currently viewing: ${entityContext.type} ${entityContext.id}` : ''}
+  `;
+
+  // 4. Call Claude API
+  const response = await anthropic.messages.create({
+    model: 'claude-3-5-haiku-latest', // 80% of calls
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [{ role: 'user', content: userQuestion }]
+  });
+
+  // 5. Save context for future reference
+  await prisma.QUAD_ai_contexts.create({
+    data: {
+      user_id: userId,
+      domain_id: domainId,
+      lifecycle: 'short_term',
+      context_type: 'conversation',
+      summary: `Asked about: ${userQuestion.substring(0, 100)}`,
+      full_content: JSON.stringify({
+        question: userQuestion,
+        response: response.content[0].text
+      }),
+      entity_type: entityContext?.type,
+      entity_id: entityContext?.id,
+      expires_at: addDays(new Date(), 30) // 30 days for short_term
+    }
+  });
+
+  return response;
+}
+```
+
+### Lifecycle Management
+
+| Lifecycle | Duration | Use Case | Example |
+|-----------|----------|----------|---------|
+| **core** | Forever | Important decisions, preferences | "User prefers verbose code comments" |
+| **long_term** | 1 year | Project-level context | "User worked on auth module" |
+| **short_term** | 30 days | Recent conversations | "User asked about PROJ-123" |
+| **momentary** | 7 days | Temporary context | "User is debugging login" |
+
+### Background Cleanup Job
+
+```typescript
+// Run daily to clean expired contexts
+async function cleanupExpiredContexts() {
+  await prisma.QUAD_ai_contexts.deleteMany({
+    where: {
+      expires_at: { lt: new Date() }
+    }
+  });
+}
+```
+
+### Smart Context Strategy: Load Only When Necessary
+
+**Key Insight:** Don't send context every time. Only load what's needed.
+
+| Request Type | Context Level | What to Load | Tokens Used |
+|--------------|---------------|--------------|-------------|
+| **Simple query** | NONE | Just query database | 0 |
+| **Entity-specific** | MINIMAL | Entity details only | ~200 |
+| **Follow-up** | RECENT | Last 1-2 conversations | ~500 |
+| **Complex planning** | FULL | Everything relevant | ~2000 |
+
+**Detection Logic:**
+
+```typescript
+function determineContextLevel(question: string, hasRecentConversation: boolean): ContextLevel {
+  // Follow-up keywords = needs recent context
+  if (/what did you|you (said|mentioned|suggested)|earlier|previous|continue/i.test(question)) {
+    return 'RECENT';
+  }
+
+  // Planning/analysis keywords = needs full context
+  if (/plan|prioritize|based on|history|overview|summarize my/i.test(question)) {
+    return 'FULL';
+  }
+
+  // Entity-specific (ticket, PR, etc.) = minimal context
+  if (/PROJ-\d+|PR-\d+|sprint|ticket/i.test(question)) {
+    return 'MINIMAL';
+  }
+
+  // Simple questions = no AI context needed (just DB query)
+  if (/status|what is|list|show me/i.test(question)) {
+    return 'NONE';
+  }
+
+  // Default: minimal if recent conversation exists, none otherwise
+  return hasRecentConversation ? 'MINIMAL' : 'NONE';
+}
+```
+
+**Examples:**
+
+```typescript
+// NONE - No AI call needed, just DB query
+"What's the status of PROJ-123?"
+  → Query: SELECT status FROM tickets WHERE ticket_number = 'PROJ-123'
+  → Response: "PROJ-123 is in_progress"
+  → AI tokens: 0
+
+// MINIMAL - Only entity details
+"Analyze ticket PROJ-123 and suggest implementation"
+  → Load: Ticket title, description, acceptance criteria
+  → AI analyzes just this ticket
+  → AI tokens: ~300
+
+// RECENT - Include last conversation
+"What did you suggest for the implementation?"
+  → Load: Last AI response from QUAD_ai_contexts
+  → AI has context of previous suggestion
+  → AI tokens: ~800
+
+// FULL - Load everything
+"Based on my work this week, what should I prioritize?"
+  → Load: Activity summary + recent tickets + preferences
+  → AI has full picture
+  → AI tokens: ~2500
+```
+
+**Implementation:**
+
+```typescript
+async function callClaudeSmartContext(
+  userId: string,
+  question: string,
+  entityContext?: { type: string; id: string }
+) {
+  // 1. Check if we even need AI
+  const simpleAnswer = await trySimpleDatabaseQuery(question);
+  if (simpleAnswer) {
+    return { answer: simpleAnswer, ai_used: false, tokens: 0 };
+  }
+
+  // 2. Determine context level needed
+  const hasRecentConvo = await hasRecentConversation(userId);
+  const contextLevel = determineContextLevel(question, hasRecentConvo);
+
+  // 3. Load appropriate context
+  let context = '';
+  switch (contextLevel) {
+    case 'NONE':
+      context = ''; // No additional context
+      break;
+    case 'MINIMAL':
+      context = entityContext ? await loadEntityDetails(entityContext) : '';
+      break;
+    case 'RECENT':
+      context = await loadRecentConversation(userId, 2); // Last 2 exchanges
+      break;
+    case 'FULL':
+      context = await loadFullContext(userId);
+      break;
+  }
+
+  // 4. Call Claude with optimized context
+  const response = await callClaude(question, context);
+
+  // 5. Save response for potential follow-ups
+  await saveToContext(userId, question, response);
+
+  return { answer: response, ai_used: true, tokens: estimatedTokens };
+}
+```
+
+**Result:**
+
+| Before (Always Full Context) | After (Smart Loading) |
+|------------------------------|----------------------|
+| Every request: ~2000 tokens | Simple: 0 tokens |
+| Cost: $0.003/request | Minimal: ~300 tokens |
+| Latency: 2-3 seconds | Cost: $0.0003-0.002/request |
+| | Latency: 0.5-2 seconds |
+
+**Session ID for Follow-ups:**
+
+For follow-up questions, we track a "conversation session":
+
+```typescript
+// User's browser stores last_context_id
+// When user asks follow-up, include last_context_id
+
+POST /api/ai/chat
+{
+  "question": "What did you suggest?",
+  "last_context_id": "uuid-of-previous-response"  // Optional
+}
+
+// Server loads only that specific context, not everything
+```
 
 ---
 

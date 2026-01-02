@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id },
       select: {
         id: true,
-        company_id: true,
+        org_id: true,
         email: true,
         full_name: true,
         role: true,
@@ -71,8 +71,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Users can only view users from their own company
-    if (user.company_id !== payload.companyId) {
+    // Users can only view users from their own organization
+    if (user.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (existing.company_id !== payload.companyId) {
+    if (existing.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -193,7 +193,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    if (existing.company_id !== payload.companyId) {
+    if (existing.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

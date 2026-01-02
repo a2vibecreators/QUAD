@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id },
       include: {
         domain: {
-          select: { id: true, name: true, company_id: true }
+          select: { id: true, name: true, org_id: true }
         },
         lead: {
           select: {
@@ -67,8 +67,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
-    // Verify circle belongs to user's company
-    if (circle.domain.company_id !== payload.companyId) {
+    // Verify circle belongs to user's organization
+    if (circle.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -106,14 +106,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const existing = await prisma.qUAD_circles.findUnique({
       where: { id },
-      include: { domain: { select: { company_id: true } } }
+      include: { domain: { select: { org_id: true } } }
     });
 
     if (!existing) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -125,7 +125,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       const leadUser = await prisma.qUAD_users.findUnique({
         where: { id: lead_user_id }
       });
-      if (!leadUser || leadUser.company_id !== payload.companyId) {
+      if (!leadUser || leadUser.org_id !== payload.companyId) {
         return NextResponse.json({ error: 'Lead user not found' }, { status: 404 });
       }
     }
@@ -178,14 +178,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const existing = await prisma.qUAD_circles.findUnique({
       where: { id },
-      include: { domain: { select: { company_id: true } } }
+      include: { domain: { select: { org_id: true } } }
     });
 
     if (!existing) {
       return NextResponse.json({ error: 'Circle not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

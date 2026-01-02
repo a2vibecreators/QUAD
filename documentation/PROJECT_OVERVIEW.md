@@ -163,8 +163,8 @@ Step 4: Export to development
 ### Database Schema (15 Tables)
 
 ```
-QUAD_companies (root)
-├── QUAD_users (company users)
+QUAD_organizations (root)
+├── QUAD_users (organization users)
 │   ├── QUAD_user_sessions (JWT sessions)
 │   ├── QUAD_adoption_matrix (AI adoption level)
 │   ├── QUAD_work_sessions (time tracking)
@@ -181,8 +181,8 @@ QUAD_companies (root)
 ```
 
 **Core Tables (8):**
-- `QUAD_companies` - Customer organizations
-- `QUAD_users` - User accounts with role_id foreign key
+- `QUAD_organizations` - Customer organizations
+- `QUAD_users` - User accounts with role_id foreign key (company_id column maps to org_id in Prisma)
 - `QUAD_roles` - Roles with Q-U-A-D stage participation (PRIMARY/SUPPORT/REVIEW/INFORM)
 - `QUAD_user_sessions` - JWT token sessions
 - `QUAD_domains` - Hierarchical workspaces

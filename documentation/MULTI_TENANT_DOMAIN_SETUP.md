@@ -114,8 +114,8 @@ app.acmecorp.com. 300 IN CNAME ghs.googlehosted.com.
 **Add company and domain to database:**
 
 ```sql
--- 1. Add company
-INSERT INTO QUAD_companies (id, name, admin_email, size)
+-- 1. Add organization
+INSERT INTO QUAD_organizations (id, name, admin_email, size)
 VALUES (
   gen_random_uuid(),
   'Acme Corp',
@@ -124,6 +124,7 @@ VALUES (
 );
 
 -- 2. Add custom domain
+-- Note: company_id column maps to org_id in Prisma
 INSERT INTO company_domains (company_id, domain, is_primary, verified, ssl_status)
 SELECT
   id,
@@ -131,17 +132,17 @@ SELECT
   true,
   true,  -- Mark as verified after DNS confirmation
   'active'
-FROM QUAD_companies
+FROM QUAD_organizations
 WHERE name = 'Acme Corp';
 
 -- 3. Verify domain added
 SELECT
-  c.name AS company,
+  c.name AS organization,
   cd.domain,
   cd.verified,
   cd.ssl_status
 FROM company_domains cd
-JOIN QUAD_companies c ON c.id = cd.company_id
+JOIN QUAD_organizations c ON c.id = cd.company_id
 WHERE cd.domain = 'app.acmecorp.com';
 ```
 
@@ -192,7 +193,7 @@ SELECT
   NULL,
   'https://acmecorp.okta.com',
   true
-FROM QUAD_companies c
+FROM QUAD_organizations c
 WHERE c.name = 'Acme Corp';
 ```
 
@@ -220,7 +221,7 @@ SELECT
   'company/' || c.id || '/sso/okta',  -- Vault path
   'https://acmecorp.okta.com',
   true
-FROM QUAD_companies c
+FROM QUAD_organizations c
 WHERE c.name = 'Acme Corp';
 ```
 
@@ -332,14 +333,15 @@ open https://app.acmecorp.com/login
 **5. Database Verification:**
 ```sql
 -- Check user was created on first login
+-- Note: company_id column maps to org_id in Prisma
 SELECT
-  c.name AS company,
+  c.name AS organization,
   u.email,
   u.oauth_provider,
   u.role,
   u.created_at
 FROM QUAD_users u
-JOIN QUAD_companies c ON c.id = u.company_id
+JOIN QUAD_organizations c ON c.id = u.company_id
 WHERE c.name = 'Acme Corp'
 ORDER BY u.created_at DESC;
 ```

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Generate JWT token
     const token = generateToken({
       id: user.id,
-      company_id: user.company_id,
+      org_id: user.org_id,  // Prisma field name (maps to company_id column)
       email: user.email,
       role: user.role,
       full_name: user.full_name,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         full_name: user.full_name,
         role: user.role,
-        company_id: user.company_id,
+        company_id: user.org_id,  // Keep response field name for API compatibility
       },
     });
   } catch (error) {

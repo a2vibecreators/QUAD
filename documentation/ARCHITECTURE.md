@@ -56,7 +56,7 @@
                                   ↓
                   ┌───────────────────────────────┐
                   │   PostgreSQL Database         │
-                  │   - QUAD_companies            │
+                  │   - QUAD_organizations        │
                   │   - QUAD_users                │
                   │   - QUAD_domains              │
                   │   - QUAD_domain_resources     │
@@ -199,10 +199,11 @@ CREATE TABLE QUAD_resource_attributes (
 ### Core Tables
 
 ```sql
--- 1. Companies (top-level organizations)
-QUAD_companies (id, name, admin_email, size)
+-- 1. Organizations (top-level organizations)
+QUAD_organizations (id, name, admin_email, size)
 
 -- 2. Users (people who log in)
+-- Note: company_id column maps to org_id in Prisma for code clarity
 QUAD_users (id, company_id, email, password_hash, role, full_name)
 
 -- 3. Domains (organizational units - hierarchical)
@@ -225,8 +226,8 @@ QUAD_resource_attribute_requirements (id, resource_type, attribute_name, is_requ
 ### Relationships
 
 ```
-QUAD_companies
-  └─ QUAD_users (one company has many users)
+QUAD_organizations
+  └─ QUAD_users (one organization has many users)
       └─ QUAD_domain_members (users belong to domains with roles)
 
 QUAD_domains

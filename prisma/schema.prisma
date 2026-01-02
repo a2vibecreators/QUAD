@@ -16,68 +16,285 @@ datasource db {
 // CORE TABLES
 // ============================================================================
 
-model QUAD_companies {
+// Organization Tiers (Math-inspired naming)
+// - SCALAR: Startups (1-10 users) - Basic features, single project focus
+// - VECTOR: Small Business (11-50 users) - More features, multi-project
+// - MATRIX: Enterprise (51+ users) - Full features, unlimited projects
+model QUAD_org_tiers {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Tier identity
+  tier_code    String  @unique @db.VarChar(20) // SCALAR, VECTOR, MATRIX
+  tier_name    String  @db.VarChar(50) // "Scalar", "Vector", "Matrix"
+  math_concept String  @db.VarChar(100) // "Single Value", "Direction + Magnitude", "Multi-dimensional"
+  description  String?
+
+  // Target audience
+  target_audience String?  @db.VarChar(100) // "Startups", "Small Business", "Enterprise"
+  min_users       Int      @default(1)
+  max_users       Int? // NULL = unlimited
+  recommended_for String[] // ["solo_founder", "small_team", "growing_company"]
+
+  // Pricing
+  price_monthly_usd Decimal  @db.Decimal(10, 2)
+  price_yearly_usd  Decimal? @db.Decimal(10, 2)
+  is_flat_rate      Boolean  @default(true) // True = flat rate, False = per user
+
+  // Feature limits
+  max_projects        Int? // NULL = unlimited
+  max_domains         Int? // NULL = unlimited
+  max_ai_requests_day Int? // NULL = unlimited
+  max_storage_gb      Int?
+
+  // Feature access (JSON for flexibility)
+  // { sprint_risk: true, dora_metrics: false, api_access: false, sso: false }
+  features_included Json
+
+  // API Access
+  api_access_level String  @default("none") @db.VarChar(20) // none, readonly, full
+  api_rate_limit   Int     @default(60) // Requests per minute
+  webhook_enabled  Boolean @default(false)
+
+  // Advanced features
+  sso_enabled       Boolean @default(false)
+  custom_branding   Boolean @default(false)
+  priority_support  Boolean @default(false)
+  dedicated_support Boolean @default(false)
+  sla_guaranteed    Boolean @default(false)
+
+  // Display
+  color_code    String? @db.VarChar(20) // For UI
+  icon_name     String? @db.VarChar(50)
+  badge_text    String? @db.VarChar(50) // "Most Popular", "Best Value"
+  display_order Int     @default(0)
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  organizations QUAD_organizations[]
+
+  @@index([tier_code])
+  @@index([is_active])
+  @@map("QUAD_org_tiers")
+}
+
+// Organization - Hierarchical structure
+// parent_id = NULL → Organization (root level)
+// parent_id != NULL → Sub-Organization (nested under parent)
+model QUAD_organizations {
   id          String   @id @default(uuid()) @db.Uuid
+  parent_id   String?  @db.Uuid // NULL = root org, not NULL = sub-org
   name        String   @db.VarChar(255)
-  admin_email String   @unique @db.VarChar(255)
+  slug        String?  @unique @db.VarChar(100) // URL-friendly name
+  admin_email String   @db.VarChar(255) // Not unique - sub-orgs can share admin
+  description String?
   size        String?  @default("medium") @db.VarChar(50)
+  tier_id     String?  @db.Uuid // Link to QUAD_org_tiers (only for root orgs)
+  path        String?  // Materialized path for hierarchy: /parent/child/grandchild
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
-  // Relations
-  users   QUAD_users[]
-  domains QUAD_domains[]
-  roles   QUAD_roles[]
+  // Self-referential hierarchy
+  parent_org  QUAD_organizations?  @relation("OrgHierarchy", fields: [parent_id], references: [id], onDelete: Cascade)
+  sub_orgs    QUAD_organizations[] @relation("OrgHierarchy")
 
-  @@map("QUAD_companies")
+  // Relations
+  tier               QUAD_org_tiers?          @relation(fields: [tier_id], references: [id], onDelete: SetNull)
+  users              QUAD_users[]             // Legacy: users with org_id (primary org)
+  org_members        QUAD_org_members[]       // All members including cross-org
+  domains            QUAD_domains[]           // Projects under this org/sub-org
+  roles              QUAD_roles[]
+  ai_provider_config QUAD_ai_provider_config?
+  invitations        QUAD_org_invitations[]
+  settings           QUAD_org_settings?       // Org-level settings
+
+  @@index([tier_id])
+  @@index([slug])
+  @@index([parent_id])
+  @@map("QUAD_organizations")
 }
 
-model QUAD_roles {
-  id                   String   @id @default(uuid()) @db.Uuid
-  company_id           String   @db.Uuid
-  role_code            String   @db.VarChar(50)
-  role_name            String   @db.VarChar(100)
-  description          String?
+// Organization Settings - configurable per org/sub-org
+model QUAD_org_settings {
+  id                     String   @id @default(uuid()) @db.Uuid
+  org_id                 String   @unique @db.Uuid
 
-  // Permission flags
-  can_manage_company   Boolean  @default(false)
-  can_manage_users     Boolean  @default(false)
-  can_manage_domains   Boolean  @default(false)
-  can_manage_flows     Boolean  @default(false)
-  can_view_all_metrics Boolean  @default(false)
-  can_manage_circles   Boolean  @default(false)
-  can_manage_resources Boolean  @default(false)
+  // Invite & Access Settings
+  allow_external_invites Boolean  @default(true) // Can invite users outside org domain?
+  allowed_email_domains  String[] // ["techcorp.com"] or empty for any
+  require_email_verify   Boolean  @default(true)
+
+  // SSO Settings (Enterprise)
+  sso_enabled            Boolean  @default(false)
+  sso_provider           String?  @db.VarChar(50) // google, okta, azure, saml
+  sso_config             Json?    // Provider-specific config
+
+  // Security Settings
+  require_2fa            Boolean  @default(false)
+  session_timeout_hours  Int      @default(24)
+  password_min_length    Int      @default(8)
+
+  // Feature Flags
+  ai_features_enabled    Boolean  @default(true)
+  gamification_enabled   Boolean  @default(true)
+
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  // Relations
+  organization QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  @@map("QUAD_org_settings")
+}
+
+// Organization Membership - allows users to belong to multiple orgs
+model QUAD_org_members {
+  id          String   @id @default(uuid()) @db.Uuid
+  org_id      String   @db.Uuid
+  user_id     String   @db.Uuid
+  role        String   @db.VarChar(50) // OWNER, ADMIN, MANAGER, DEVELOPER
+  is_primary  Boolean  @default(false) // User's "home" organization
+  invited_by  String?  @db.Uuid
+  joined_at   DateTime @default(now())
+  is_active   Boolean  @default(true)
+
+  // Relations
+  organization QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  user         QUAD_users         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  inviter      QUAD_users?        @relation("InvitedBy", fields: [invited_by], references: [id], onDelete: SetNull)
+
+  @@unique([org_id, user_id])
+  @@index([org_id])
+  @@index([user_id])
+  @@index([is_primary])
+  @@map("QUAD_org_members")
+}
+
+// Organization Invitations - pending invites
+model QUAD_org_invitations {
+  id           String    @id @default(uuid()) @db.Uuid
+  org_id       String    @db.Uuid
+  email        String    @db.VarChar(255)
+  role         String    @db.VarChar(50) // Role they'll have when accepted
+  invited_by   String    @db.Uuid
+  invite_token String    @unique @db.VarChar(255)
+  expires_at   DateTime
+  accepted_at  DateTime?
+  created_at   DateTime  @default(now())
+
+  // Relations
+  organization QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  @@index([org_id])
+  @@index([email])
+  @@index([invite_token])
+  @@map("QUAD_org_invitations")
+}
+
+// =============================================================================
+// CORE ROLES - Master list of role templates (system-wide)
+// Users can select from this list or create custom roles linked to a core role
+// =============================================================================
+model QUAD_core_roles {
+  id            String  @id @default(uuid()) @db.Uuid
+  role_code     String  @unique @db.VarChar(50)  // QUAD_ADMIN, ORG_ADMIN, etc.
+  role_name     String  @db.VarChar(100)
+  category      String  @db.VarChar(50)  // ADMIN, MANAGEMENT, TECHNICAL, SUPPORT
+  description   String?
+
+  // Default permission flags (templates for org roles)
+  can_manage_org       Boolean @default(false)
+  can_manage_users     Boolean @default(false)
+  can_manage_domains   Boolean @default(false)
+  can_manage_flows     Boolean @default(false)
+  can_view_all_metrics Boolean @default(false)
+  can_manage_circles   Boolean @default(false)
+  can_manage_resources Boolean @default(false)
+  can_delete_domain    Boolean @default(false)  // DOMAIN_ADMIN only
+
+  // Default Q-U-A-D participation
+  q_participation String? @db.VarChar(10)
+  u_participation String? @db.VarChar(10)
+  a_participation String? @db.VarChar(10)
+  d_participation String? @db.VarChar(10)
+
+  // Hierarchy (higher = more authority)
+  hierarchy_level Int     @default(0)
+  display_order   Int     @default(0)
+  color_code      String? @db.VarChar(20)
+  icon_name       String? @db.VarChar(50)
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations - org roles link to this
+  org_roles QUAD_roles[]
+
+  @@index([category])
+  @@index([hierarchy_level])
+  @@map("QUAD_core_roles")
+}
+
+// =============================================================================
+// ORG ROLES - Organization-specific roles (can customize from core roles)
+// =============================================================================
+model QUAD_roles {
+  id            String  @id @default(uuid()) @db.Uuid
+  org_id        String  @map("company_id") @db.Uuid
+  core_role_id  String? @db.Uuid  // Link to QUAD_core_roles (required for custom roles)
+  role_code     String  @db.VarChar(50)
+  role_name     String  @db.VarChar(100)
+  description   String?
+
+  // Custom responsibilities (future: from uploaded text file)
+  responsibilities_text String?  // Future: user uploads responsibilities
+
+  // Permission flags (inherited from core_role, can be customized)
+  can_manage_org       Boolean @default(false) @map("can_manage_company")
+  can_manage_users     Boolean @default(false)
+  can_manage_domains   Boolean @default(false)
+  can_manage_flows     Boolean @default(false)
+  can_view_all_metrics Boolean @default(false)
+  can_manage_circles   Boolean @default(false)
+  can_manage_resources Boolean @default(false)
+  can_delete_domain    Boolean @default(false)
 
   // Q-U-A-D Stage Participation
   // Values: 'PRIMARY', 'SUPPORT', 'REVIEW', 'INFORM', NULL
-  q_participation      String?  @db.VarChar(10)
-  u_participation      String?  @db.VarChar(10)
-  a_participation      String?  @db.VarChar(10)
-  d_participation      String?  @db.VarChar(10)
+  q_participation String? @db.VarChar(10)
+  u_participation String? @db.VarChar(10)
+  a_participation String? @db.VarChar(10)
+  d_participation String? @db.VarChar(10)
 
   // UI display
-  color_code           String?  @db.VarChar(20)
-  icon_name            String?  @db.VarChar(50)
-  display_order        Int      @default(0)
+  color_code    String? @db.VarChar(20)
+  icon_name     String? @db.VarChar(50)
+  display_order Int     @default(0)
 
   // Hierarchy (higher = more authority)
-  hierarchy_level      Int      @default(0)
+  hierarchy_level Int @default(0)
 
   // Status
-  is_system_role       Boolean  @default(false)
-  is_active            Boolean  @default(true)
+  is_system_role Boolean @default(false)  // Created by system on org creation
+  is_custom      Boolean @default(false)  // Custom role created by admin
+  is_active      Boolean @default(true)
 
   // Metadata
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   // Relations
-  company QUAD_companies @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  users   QUAD_users[]
+  organization QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  core_role    QUAD_core_roles?   @relation(fields: [core_role_id], references: [id], onDelete: SetNull)
+  users        QUAD_users[]
 
-  @@unique([company_id, role_code])
-  @@index([company_id])
+  @@unique([org_id, role_code])
+  @@index([org_id])
+  @@index([core_role_id])
   @@index([role_code])
   @@index([is_active])
   @@index([hierarchy_level])
@@ -86,7 +303,7 @@ model QUAD_roles {
 
 model QUAD_users {
   id             String   @id @default(uuid()) @db.Uuid
-  company_id     String   @db.Uuid
+  org_id         String   @map("company_id") @db.Uuid // Primary org (where user was created) - maps to company_id in DB
   email          String   @unique @db.VarChar(255)
   password_hash  String   @db.VarChar(255)
   role_id        String?  @db.Uuid
@@ -97,20 +314,30 @@ model QUAD_users {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  // Relations
-  company          QUAD_companies         @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  user_role        QUAD_roles?            @relation(fields: [role_id], references: [id], onDelete: SetNull)
+  // Relations - Primary org
+  organization     QUAD_organizations      @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  user_role        QUAD_roles?             @relation(fields: [role_id], references: [id], onDelete: SetNull)
+
+  // Relations - Multi-org membership
+  org_memberships  QUAD_org_members[]      // All orgs user belongs to
+  invites_sent     QUAD_org_members[]      @relation("InvitedBy") // Users this person invited
+
+  // Relations - Other
   sessions         QUAD_user_sessions[]
   domain_members   QUAD_domain_members[]
   adoption_matrix  QUAD_adoption_matrix?
   work_sessions    QUAD_work_sessions[]
   workload_metrics QUAD_workload_metrics[]
-  flows_assigned   QUAD_flows[]           @relation("FlowAssignedTo")
-  flows_created    QUAD_flows[]           @relation("FlowCreatedBy")
+  flows_assigned   QUAD_flows[]            @relation("FlowAssignedTo")
+  flows_created    QUAD_flows[]            @relation("FlowCreatedBy")
   circle_members   QUAD_circle_members[]
   circles_leading  QUAD_circles[]
 
-  @@index([company_id])
+  // Relations - Domain ownership (for soft-delete permissions)
+  domains_created  QUAD_domains[]          @relation("DomainCreator")
+  domains_deleted  QUAD_domains[]          @relation("DomainDeleter")
+
+  @@index([org_id])
   @@index([email])
   @@index([role_id])
   @@index([role])
@@ -118,14 +345,14 @@ model QUAD_users {
 }
 
 model QUAD_user_sessions {
-  id            String    @id @default(uuid()) @db.Uuid
-  user_id       String    @db.Uuid
-  session_token String    @unique @db.VarChar(255)
+  id            String   @id @default(uuid()) @db.Uuid
+  user_id       String   @db.Uuid
+  session_token String   @unique @db.VarChar(255)
   expires_at    DateTime
-  ip_address    String?   @db.VarChar(50)
+  ip_address    String?  @db.VarChar(50)
   user_agent    String?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   // Relations
   user QUAD_users @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -137,29 +364,61 @@ model QUAD_user_sessions {
 }
 
 model QUAD_domains {
-  id               String   @id @default(uuid()) @db.Uuid
-  company_id       String   @db.Uuid
-  name             String   @db.VarChar(255)
-  parent_domain_id String?  @db.Uuid
-  domain_type      String?  @db.VarChar(50)
+  id               String  @id @default(uuid()) @db.Uuid
+  org_id           String  @map("company_id") @db.Uuid // Maps to company_id in DB
+  name             String  @db.VarChar(255)
+  parent_domain_id String? @db.Uuid
+  domain_type      String? @db.VarChar(50) // GROUP or PROJECT
+  is_project       Boolean @default(false) // True = leaf domain (project), False = group
   path             String?
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
+  description      String?
 
-  // Relations
-  company          QUAD_companies        @relation(fields: [company_id], references: [id], onDelete: Cascade)
-  parent_domain    QUAD_domains?         @relation("DomainHierarchy", fields: [parent_domain_id], references: [id], onDelete: Cascade)
-  sub_domains      QUAD_domains[]        @relation("DomainHierarchy")
+  // Project-specific (only if is_project = true)
+  ticket_prefix String? @db.VarChar(10) // e.g., "PROJ" for PROJ-123
+
+  // Audit fields
+  created_by String? @db.Uuid // DOMAIN_ADMIN who created this domain
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Soft-delete fields (only DOMAIN_ADMIN/creator can delete)
+  is_deleted Boolean   @default(false)
+  deleted_at DateTime?
+  deleted_by String?   @db.Uuid // User who soft-deleted
+
+  // Relations - Core
+  organization     QUAD_organizations      @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  creator          QUAD_users?             @relation("DomainCreator", fields: [created_by], references: [id], onDelete: SetNull)
+  deleter          QUAD_users?             @relation("DomainDeleter", fields: [deleted_by], references: [id], onDelete: SetNull)
+  parent_domain    QUAD_domains?           @relation("DomainHierarchy", fields: [parent_domain_id], references: [id], onDelete: Cascade)
+  sub_domains      QUAD_domains[]          @relation("DomainHierarchy")
   members          QUAD_domain_members[]
   resources        QUAD_domain_resources[]
   flows            QUAD_flows[]
   circles          QUAD_circles[]
   workload_metrics QUAD_workload_metrics[]
 
-  @@index([company_id])
+  // Relations - Phase 1
+  requirements        QUAD_requirements[]
+  milestones          QUAD_milestones[]
+  cycles              QUAD_cycles[]
+  tickets             QUAD_tickets[]
+  git_repositories    QUAD_git_repositories[]
+  environments        QUAD_environments[]
+  ai_operations       QUAD_ai_operations[]
+  approvals           QUAD_approvals[]
+  file_imports        QUAD_file_imports[]
+  meetings            QUAD_meetings[]
+  rag_indexes         QUAD_rag_indexes[]
+  database_operations QUAD_database_operations[]
+
+  @@index([org_id])
   @@index([parent_domain_id])
   @@index([domain_type])
+  @@index([is_project])
   @@index([path])
+  @@index([is_deleted])
+  @@index([created_by])
   @@map("QUAD_domains")
 }
 
@@ -342,18 +601,18 @@ model QUAD_flow_stage_history {
 }
 
 model QUAD_work_sessions {
-  id            String   @id @default(uuid()) @db.Uuid
-  user_id       String   @db.Uuid
-  session_date  DateTime @db.Date
-  hours_worked  Decimal  @default(0) @db.Decimal(4, 2)
-  is_workday    Boolean  @default(true)
+  id            String    @id @default(uuid()) @db.Uuid
+  user_id       String    @db.Uuid
+  session_date  DateTime  @db.Date
+  hours_worked  Decimal   @default(0) @db.Decimal(4, 2)
+  is_workday    Boolean   @default(true)
   start_time    DateTime? @db.Time()
   end_time      DateTime? @db.Time()
-  deep_work_pct Decimal? @db.Decimal(5, 2)
-  meeting_hours Decimal? @db.Decimal(4, 2)
+  deep_work_pct Decimal?  @db.Decimal(5, 2)
+  meeting_hours Decimal?  @db.Decimal(4, 2)
   notes         String?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
   // Relations
   user QUAD_users @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -404,4 +663,2300 @@ model QUAD_circle_members {
   @@index([circle_id])
   @@index([user_id])
   @@map("QUAD_circle_members")
+}
+
+// ============================================================================
+// PHASE 1: REQUIREMENTS & MILESTONES
+// ============================================================================
+
+// BA uploads requirements documents, AI processes them
+model QUAD_requirements {
+  id               String    @id @default(uuid()) @db.Uuid
+  domain_id        String    @db.Uuid
+  title            String    @db.VarChar(500)
+  description      String?
+  source_type      String    @db.VarChar(50) // UPLOAD, MANUAL, MEETING_TRANSCRIPT
+  source_file_url  String? // S3/GCS URL for uploaded file
+  source_file_name String?   @db.VarChar(255)
+  ai_processed     Boolean   @default(false)
+  ai_processed_at  DateTime?
+  status           String    @default("draft") @db.VarChar(50) // draft, processing, approved, archived
+  created_by       String    @db.Uuid
+  approved_by      String?   @db.Uuid
+  approved_at      DateTime?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  // Relations
+  domain     QUAD_domains      @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  milestones QUAD_milestones[]
+
+  @@index([domain_id])
+  @@index([status])
+  @@index([created_by])
+  @@map("QUAD_requirements")
+}
+
+// AI-generated milestones from requirements
+model QUAD_milestones {
+  id             String    @id @default(uuid()) @db.Uuid
+  requirement_id String?   @db.Uuid
+  domain_id      String    @db.Uuid
+  title          String    @db.VarChar(500)
+  description    String?
+  sequence_order Int       @default(0)
+  status         String    @default("pending") @db.VarChar(50) // pending, in_progress, completed, blocked
+  target_date    DateTime? @db.Date
+  completed_at   DateTime?
+  ai_confidence  Decimal?  @db.Decimal(3, 2) // 0.00 to 1.00
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+
+  // Relations
+  requirement QUAD_requirements? @relation(fields: [requirement_id], references: [id], onDelete: SetNull)
+  domain      QUAD_domains       @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  cycles      QUAD_cycles[]
+
+  @@index([requirement_id])
+  @@index([domain_id])
+  @@index([status])
+  @@map("QUAD_milestones")
+}
+
+// ============================================================================
+// PHASE 1: CYCLES & TICKETS (QUAD Terminology: Cycles = Sprints)
+// ============================================================================
+
+model QUAD_cycles {
+  id           String   @id @default(uuid()) @db.Uuid
+  domain_id    String   @db.Uuid
+  milestone_id String?  @db.Uuid
+  cycle_number Int
+  name         String   @db.VarChar(255)
+  goal         String?
+  start_date   DateTime @db.Date
+  end_date     DateTime @db.Date
+  status       String   @default("planned") @db.VarChar(50) // planned, active, completed, cancelled
+  velocity     Int? // Story points completed
+  capacity     Int? // Planned story points
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  domain    QUAD_domains     @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  milestone QUAD_milestones? @relation(fields: [milestone_id], references: [id], onDelete: SetNull)
+  tickets   QUAD_tickets[]
+
+  @@unique([domain_id, cycle_number])
+  @@index([domain_id])
+  @@index([milestone_id])
+  @@index([status])
+  @@map("QUAD_cycles")
+}
+
+// Tickets are detailed work items (extends QUAD_flows concept)
+model QUAD_tickets {
+  id               String  @id @default(uuid()) @db.Uuid
+  domain_id        String  @db.Uuid
+  cycle_id         String? @db.Uuid
+  parent_ticket_id String? @db.Uuid // For sub-tasks
+  flow_id          String? @db.Uuid // Link to QUAD_flows
+
+  // Core fields
+  ticket_number       String  @db.VarChar(50) // e.g., PROJ-123
+  title               String  @db.VarChar(500)
+  description         String?
+  acceptance_criteria String?
+
+  // Type and status
+  ticket_type String @default("task") @db.VarChar(50) // epic, story, task, bug, subtask
+  status      String @default("backlog") @db.VarChar(50) // backlog, todo, in_progress, in_review, testing, done, blocked
+  priority    String @default("medium") @db.VarChar(20) // critical, high, medium, low
+
+  // Assignment
+  assigned_to String? @db.Uuid
+  reporter_id String  @db.Uuid
+
+  // Estimation
+  story_points      Int?
+  ai_estimate_hours Decimal? @db.Decimal(5, 2)
+  actual_hours      Decimal? @db.Decimal(5, 2)
+
+  // AI Integration
+  ai_implementation_plan String? // AI-generated implementation steps
+  ai_suggested_files     String[] // Files AI suggests to modify
+  ai_confidence          Decimal? @db.Decimal(3, 2)
+
+  // Git Integration
+  branch_name     String? @db.VarChar(255)
+  pull_request_id String? @db.Uuid
+
+  // Timestamps
+  started_at   DateTime?
+  completed_at DateTime?
+  due_date     DateTime? @db.Date
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  // Relations
+  domain        QUAD_domains            @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  cycle         QUAD_cycles?            @relation(fields: [cycle_id], references: [id], onDelete: SetNull)
+  parent_ticket QUAD_tickets?           @relation("TicketSubtasks", fields: [parent_ticket_id], references: [id], onDelete: Cascade)
+  subtasks      QUAD_tickets[]          @relation("TicketSubtasks")
+  comments      QUAD_ticket_comments[]
+  time_logs     QUAD_ticket_time_logs[]
+  pull_request  QUAD_pull_requests?     @relation(fields: [pull_request_id], references: [id], onDelete: SetNull)
+
+  @@unique([domain_id, ticket_number])
+  @@index([domain_id])
+  @@index([cycle_id])
+  @@index([parent_ticket_id])
+  @@index([assigned_to])
+  @@index([status])
+  @@index([ticket_type])
+  @@index([priority])
+  @@map("QUAD_tickets")
+}
+
+model QUAD_ticket_comments {
+  id         String   @id @default(uuid()) @db.Uuid
+  ticket_id  String   @db.Uuid
+  user_id    String   @db.Uuid
+  content    String
+  is_ai      Boolean  @default(false) // True if AI-generated
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  ticket QUAD_tickets @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+
+  @@index([ticket_id])
+  @@index([user_id])
+  @@map("QUAD_ticket_comments")
+}
+
+model QUAD_ticket_time_logs {
+  id          String   @id @default(uuid()) @db.Uuid
+  ticket_id   String   @db.Uuid
+  user_id     String   @db.Uuid
+  hours       Decimal  @db.Decimal(4, 2)
+  description String?
+  logged_date DateTime @db.Date
+  created_at  DateTime @default(now())
+
+  // Relations
+  ticket QUAD_tickets @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+
+  @@index([ticket_id])
+  @@index([user_id])
+  @@index([logged_date])
+  @@map("QUAD_ticket_time_logs")
+}
+
+// ============================================================================
+// PHASE 1: GIT INTEGRATION
+// ============================================================================
+
+model QUAD_git_repositories {
+  id             String  @id @default(uuid()) @db.Uuid
+  domain_id      String  @db.Uuid
+  provider       String  @db.VarChar(50) // github, gitlab, bitbucket, azure_devops
+  owner          String  @db.VarChar(255) // GitHub org or user
+  repo_name      String  @db.VarChar(255)
+  full_name      String  @db.VarChar(500) // owner/repo
+  default_branch String  @default("main") @db.VarChar(100)
+  clone_url      String?
+  web_url        String?
+  is_private     Boolean @default(true)
+
+  // Branch naming convention
+  feature_prefix String @default("feature/") @db.VarChar(50)
+  bugfix_prefix  String @default("bugfix/") @db.VarChar(50)
+  hotfix_prefix  String @default("hotfix/") @db.VarChar(50)
+
+  // Connection
+  access_token_id String?   @db.Uuid // Reference to secret vault
+  last_synced_at  DateTime?
+  sync_status     String    @default("pending") @db.VarChar(50)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain         QUAD_domains          @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  pull_requests  QUAD_pull_requests[]
+  git_operations QUAD_git_operations[]
+
+  @@unique([domain_id, provider, full_name])
+  @@index([domain_id])
+  @@index([provider])
+  @@map("QUAD_git_repositories")
+}
+
+model QUAD_pull_requests {
+  id            String  @id @default(uuid()) @db.Uuid
+  repository_id String  @db.Uuid
+  pr_number     Int
+  title         String  @db.VarChar(500)
+  description   String?
+  source_branch String  @db.VarChar(255)
+  target_branch String  @db.VarChar(255)
+  status        String  @default("open") @db.VarChar(50) // open, closed, merged
+
+  // Review
+  review_status String?  @db.VarChar(50) // pending, approved, changes_requested, rejected
+  reviewers     String[] // Array of user IDs
+  approved_by   String[] // Array of user IDs who approved
+
+  // AI Integration
+  ai_generated    Boolean @default(false)
+  ai_review_notes String?
+
+  // External
+  external_url String?
+  external_id  String? @db.VarChar(100)
+
+  // Timestamps
+  created_by String    @db.Uuid
+  merged_at  DateTime?
+  merged_by  String?   @db.Uuid
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+
+  // Relations
+  repository QUAD_git_repositories @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  tickets    QUAD_tickets[]
+
+  @@unique([repository_id, pr_number])
+  @@index([repository_id])
+  @@index([status])
+  @@index([created_by])
+  @@map("QUAD_pull_requests")
+}
+
+model QUAD_git_operations {
+  id            String  @id @default(uuid()) @db.Uuid
+  repository_id String  @db.Uuid
+  operation     String  @db.VarChar(50) // clone, pull, push, create_branch, create_pr, merge
+  status        String  @default("pending") @db.VarChar(50) // pending, in_progress, completed, failed
+  initiated_by  String  @db.Uuid
+  is_ai         Boolean @default(false) // True if AI initiated
+
+  // Details
+  source_ref    String? @db.VarChar(255)
+  target_ref    String? @db.VarChar(255)
+  commit_sha    String? @db.VarChar(50)
+  files_changed Int?
+  additions     Int?
+  deletions     Int?
+
+  // Error handling
+  error_message String?
+
+  started_at   DateTime?
+  completed_at DateTime?
+  created_at   DateTime  @default(now())
+
+  // Relations
+  repository QUAD_git_repositories @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+
+  @@index([repository_id])
+  @@index([operation])
+  @@index([status])
+  @@index([initiated_by])
+  @@map("QUAD_git_operations")
+}
+
+// ============================================================================
+// PHASE 1: DEPLOYMENT
+// ============================================================================
+
+model QUAD_environments {
+  id           String  @id @default(uuid()) @db.Uuid
+  domain_id    String  @db.Uuid
+  name         String  @db.VarChar(50) // DEV, QA, STAGING, PROD
+  display_name String  @db.VarChar(100)
+  description  String?
+
+  // Configuration
+  cloud_provider String? @db.VarChar(50) // gcp, aws, azure, docker
+  region         String? @db.VarChar(50)
+  project_id     String? @db.VarChar(255) // GCP project, AWS account
+
+  // URLs
+  base_url String?
+  api_url  String?
+
+  // Deployment settings
+  auto_deploy       Boolean @default(false) // Auto-deploy on merge
+  requires_approval Boolean @default(false)
+  approval_role     String? @db.VarChar(50) // Role that can approve
+
+  // Status
+  is_active        Boolean   @default(true)
+  last_deployed_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain      QUAD_domains              @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  recipes     QUAD_deployment_recipes[]
+  deployments QUAD_deployments[]
+
+  @@unique([domain_id, name])
+  @@index([domain_id])
+  @@index([cloud_provider])
+  @@map("QUAD_environments")
+}
+
+// Deployment Recipe: First run Claude suggests steps, user approves, saved for future
+model QUAD_deployment_recipes {
+  id             String  @id @default(uuid()) @db.Uuid
+  environment_id String  @db.Uuid
+  name           String  @db.VarChar(255)
+  description    String?
+
+  // Recipe content (JSON array of steps)
+  steps Json // [{order: 1, command: "...", description: "..."}, ...]
+
+  // Status
+  status      String    @default("draft") @db.VarChar(50) // draft, pending_approval, approved, deprecated
+  approved_by String?   @db.Uuid
+  approved_at DateTime?
+
+  // AI tracking
+  ai_generated  Boolean  @default(false)
+  ai_confidence Decimal? @db.Decimal(3, 2)
+
+  // Usage
+  times_used               Int       @default(0)
+  last_used_at             DateTime?
+  average_duration_seconds Int?
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  environment QUAD_environments  @relation(fields: [environment_id], references: [id], onDelete: Cascade)
+  deployments QUAD_deployments[]
+
+  @@index([environment_id])
+  @@index([status])
+  @@map("QUAD_deployment_recipes")
+}
+
+model QUAD_deployments {
+  id             String  @id @default(uuid()) @db.Uuid
+  environment_id String  @db.Uuid
+  recipe_id      String? @db.Uuid
+
+  // Trigger
+  trigger_type String  @db.VarChar(50) // manual, auto, rollback
+  trigger_ref  String? @db.VarChar(255) // branch name or commit SHA
+
+  // Status
+  status String @default("pending") @db.VarChar(50) // pending, in_progress, completed, failed, rolled_back
+
+  // Execution
+  started_at       DateTime?
+  completed_at     DateTime?
+  duration_seconds Int?
+
+  // Logs
+  log_url       String? // URL to deployment logs
+  logs          String? // Inline logs (first N lines)
+  error_message String?
+
+  // Rollback
+  previous_deployment_id String?   @db.Uuid
+  rolled_back_at         DateTime?
+  rolled_back_by         String?   @db.Uuid
+
+  initiated_by String   @db.Uuid
+  created_at   DateTime @default(now())
+
+  // Relations
+  environment QUAD_environments        @relation(fields: [environment_id], references: [id], onDelete: Cascade)
+  recipe      QUAD_deployment_recipes? @relation(fields: [recipe_id], references: [id], onDelete: SetNull)
+
+  @@index([environment_id])
+  @@index([recipe_id])
+  @@index([status])
+  @@index([initiated_by])
+  @@map("QUAD_deployments")
+}
+
+// ============================================================================
+// PHASE 1: AI OPERATIONS
+// ============================================================================
+
+model QUAD_ai_operations {
+  id             String @id @default(uuid()) @db.Uuid
+  domain_id      String @db.Uuid
+  operation_type String @db.VarChar(50) // analyze_requirement, generate_plan, implement_code, review_code, generate_docs
+
+  // Request
+  input_summary String? @db.VarChar(1000)
+  model_used    String  @db.VarChar(100) // claude-3-opus, claude-3-sonnet, gpt-4, etc.
+
+  // Response
+  status         String   @default("pending") @db.VarChar(50) // pending, processing, completed, failed
+  output_summary String?
+  confidence     Decimal? @db.Decimal(3, 2)
+
+  // Metrics
+  input_tokens  Int?
+  output_tokens Int?
+  cost_usd      Decimal? @db.Decimal(6, 4)
+  duration_ms   Int?
+
+  // Error handling
+  error_message String?
+  retry_count   Int     @default(0)
+
+  // Tracking
+  parent_operation_id String? @db.Uuid // For chained operations
+  triggered_by        String? @db.Uuid // User who triggered
+
+  started_at   DateTime?
+  completed_at DateTime?
+  created_at   DateTime  @default(now())
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@index([domain_id])
+  @@index([operation_type])
+  @@index([status])
+  @@index([triggered_by])
+  @@index([created_at])
+  @@map("QUAD_ai_operations")
+}
+
+// ============================================================================
+// PHASE 1: NOTIFICATIONS
+// ============================================================================
+
+model QUAD_notifications {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+
+  // Content
+  title             String @db.VarChar(255)
+  message           String
+  notification_type String @db.VarChar(50) // ticket_assigned, pr_review, deployment, mention, approval_needed
+
+  // Context
+  entity_type String? @db.VarChar(50) // ticket, pr, deployment, etc.
+  entity_id   String? @db.Uuid
+  action_url  String?
+
+  // Delivery
+  channels_sent String[] // email, in_app, slack, mobile_push
+
+  // Status
+  is_read Boolean   @default(false)
+  read_at DateTime?
+
+  created_at DateTime @default(now())
+
+  @@index([user_id])
+  @@index([notification_type])
+  @@index([is_read])
+  @@index([created_at])
+  @@map("QUAD_notifications")
+}
+
+model QUAD_notification_preferences {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+
+  // Channel preferences
+  email_enabled       Boolean @default(true)
+  in_app_enabled      Boolean @default(true)
+  slack_enabled       Boolean @default(false)
+  mobile_push_enabled Boolean @default(true)
+
+  // Type preferences (JSON object mapping type -> enabled)
+  type_preferences Json? // { "ticket_assigned": true, "pr_review": true, ... }
+
+  // Quiet hours
+  quiet_hours_enabled Boolean   @default(false)
+  quiet_start_time    DateTime? @db.Time()
+  quiet_end_time      DateTime? @db.Time()
+  timezone            String?   @db.VarChar(50)
+
+  // Digest
+  digest_enabled   Boolean @default(false)
+  digest_frequency String? @default("daily") @db.VarChar(20) // daily, weekly
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id])
+  @@index([user_id])
+  @@map("QUAD_notification_preferences")
+}
+
+// ============================================================================
+// PHASE 1: MULTI-ROLE SUPPORT
+// ============================================================================
+
+// One person can have multiple roles (70% Dev, 30% QA)
+model QUAD_user_role_allocations {
+  id        String @id @default(uuid()) @db.Uuid
+  user_id   String @db.Uuid
+  domain_id String @db.Uuid
+  role_id   String @db.Uuid
+
+  allocation_pct Int     @default(100) // Percentage of time for this role
+  is_primary     Boolean @default(false) // Primary role for this domain
+
+  effective_from DateTime  @default(now())
+  effective_to   DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, domain_id, role_id])
+  @@index([user_id])
+  @@index([domain_id])
+  @@index([role_id])
+  @@map("QUAD_user_role_allocations")
+}
+
+// ============================================================================
+// PHASE 1: APPROVALS
+// ============================================================================
+
+model QUAD_approvals {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // What needs approval
+  approval_type String @db.VarChar(50) // deployment, pr_merge, database_operation, requirement_approval
+  entity_type   String @db.VarChar(50)
+  entity_id     String @db.Uuid
+
+  // Request
+  requested_by String   @db.Uuid
+  requested_at DateTime @default(now())
+  reason       String?
+
+  // Approval
+  status         String    @default("pending") @db.VarChar(50) // pending, approved, rejected, expired
+  decided_by     String?   @db.Uuid
+  decided_at     DateTime?
+  decision_notes String?
+
+  // Expiry
+  expires_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@index([domain_id])
+  @@index([approval_type])
+  @@index([status])
+  @@index([requested_by])
+  @@index([decided_by])
+  @@map("QUAD_approvals")
+}
+
+// ============================================================================
+// PHASE 1: FILE IMPORTS (Wireframes, Docs)
+// ============================================================================
+
+model QUAD_file_imports {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // File info
+  file_name String  @db.VarChar(255)
+  file_type String  @db.VarChar(50) // ppt, pdf, png, jpg, figma, doc, xls
+  file_url  String // S3/GCS URL
+  file_size Int? // bytes
+  mime_type String? @db.VarChar(100)
+
+  // Category
+  import_type String  @db.VarChar(50) // wireframe, requirement, design, architecture, other
+  description String?
+
+  // AI Processing
+  ai_processed      Boolean @default(false)
+  ai_extracted_text String?
+  ai_analysis       Json? // AI analysis results
+
+  // Status
+  status String @default("uploaded") @db.VarChar(50) // uploaded, processing, processed, failed
+
+  uploaded_by String   @db.Uuid
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@index([domain_id])
+  @@index([import_type])
+  @@index([status])
+  @@index([uploaded_by])
+  @@map("QUAD_file_imports")
+}
+
+// ============================================================================
+// PHASE 1: MEETING INTEGRATION
+// ============================================================================
+
+model QUAD_meetings {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Meeting info
+  title        String  @db.VarChar(500)
+  description  String?
+  meeting_type String? @db.VarChar(50) // standup, planning, review, retrospective, ad_hoc
+
+  // Scheduling
+  scheduled_at     DateTime
+  duration_minutes Int?
+
+  // Integration
+  external_provider String? @db.VarChar(50) // cal_com, google_calendar, outlook
+  external_id       String? @db.VarChar(255)
+  meeting_url       String?
+
+  // Transcript
+  transcript_provider String? @db.VarChar(50) // otter_ai, fireflies, manual
+  transcript_url      String?
+  transcript_text     String?
+
+  // AI Processing
+  ai_processed Boolean @default(false)
+  ai_summary   String?
+
+  // Status
+  status String @default("scheduled") @db.VarChar(50) // scheduled, in_progress, completed, cancelled
+
+  organizer_id String   @db.Uuid
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  // Relations
+  domain       QUAD_domains                @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  action_items QUAD_meeting_action_items[]
+
+  @@index([domain_id])
+  @@index([meeting_type])
+  @@index([status])
+  @@index([scheduled_at])
+  @@map("QUAD_meetings")
+}
+
+model QUAD_meeting_action_items {
+  id         String @id @default(uuid()) @db.Uuid
+  meeting_id String @db.Uuid
+
+  // Content
+  description String
+
+  // Assignment
+  assigned_to String?   @db.Uuid
+  due_date    DateTime? @db.Date
+
+  // Linking
+  ticket_id String? @db.Uuid // If converted to ticket
+
+  // Status
+  status String @default("pending") @db.VarChar(50) // pending, in_progress, completed, cancelled
+
+  // AI
+  ai_extracted  Boolean  @default(false) // True if AI extracted from transcript
+  ai_confidence Decimal? @db.Decimal(3, 2)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  meeting QUAD_meetings @relation(fields: [meeting_id], references: [id], onDelete: Cascade)
+
+  @@index([meeting_id])
+  @@index([assigned_to])
+  @@index([status])
+  @@map("QUAD_meeting_action_items")
+}
+
+// ============================================================================
+// PHASE 1: RAG CHATBOT
+// ============================================================================
+
+model QUAD_rag_indexes {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Index info
+  name        String  @db.VarChar(255)
+  description String?
+
+  // What's indexed
+  includes_code        Boolean @default(true)
+  includes_docs        Boolean @default(true)
+  includes_git_history Boolean @default(true)
+  includes_tickets     Boolean @default(true)
+  includes_prs         Boolean @default(true)
+
+  // Status
+  status String @default("pending") @db.VarChar(50) // pending, indexing, ready, failed
+
+  // Metrics
+  document_count         Int       @default(0)
+  embedding_count        Int       @default(0)
+  last_indexed_at        DateTime?
+  index_duration_seconds Int?
+
+  // Vector store
+  vector_store_type String? @db.VarChar(50) // pinecone, weaviate, pgvector
+  vector_store_id   String? @db.VarChar(255)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id])
+  @@index([domain_id])
+  @@index([status])
+  @@map("QUAD_rag_indexes")
+}
+
+// ============================================================================
+// PHASE 1: AI SESSION CONTEXT (Like NutriNine's conversation_memories)
+// ============================================================================
+
+// Store AI conversation context for each user
+// This allows "session" behavior with stateless Claude API
+model QUAD_ai_contexts {
+  id        String  @id @default(uuid()) @db.Uuid
+  user_id   String  @db.Uuid
+  domain_id String? @db.Uuid
+
+  // Context classification (inspired by NutriNine)
+  lifecycle    String @default("short_term") @db.VarChar(20) // core, long_term, short_term, momentary
+  context_type String @db.VarChar(50) // conversation, activity, decision, preference
+
+  // Content
+  summary      String // Brief summary of what happened
+  full_content String? // Full conversation/activity details
+
+  // Entity linking
+  entity_type String? @db.VarChar(50) // ticket, sprint, requirement, pr, deployment
+  entity_id   String? @db.Uuid
+
+  // Importance and emotion (for AI personalization)
+  importance_score Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
+
+  // Expiry based on lifecycle
+  // core = never, long_term = 1 year, short_term = 30 days, momentary = 7 days
+  expires_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([domain_id])
+  @@index([lifecycle])
+  @@index([context_type])
+  @@index([entity_type, entity_id])
+  @@index([expires_at])
+  @@map("QUAD_ai_contexts")
+}
+
+// Link related contexts together (for context chains)
+model QUAD_ai_context_relationships {
+  id                    String   @id @default(uuid()) @db.Uuid
+  source_context_id     String   @db.Uuid
+  target_context_id     String   @db.Uuid
+  relationship_type     String   @db.VarChar(50) // follow_up, related_to, caused_by, references
+  relationship_strength Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
+
+  created_at DateTime @default(now())
+
+  @@unique([source_context_id, target_context_id])
+  @@index([source_context_id])
+  @@index([target_context_id])
+  @@map("QUAD_ai_context_relationships")
+}
+
+// User activity summary (loaded on login for quick context)
+model QUAD_user_activity_summaries {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+
+  // Period
+  period_type  String   @db.VarChar(20) // daily, weekly
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+
+  // Activity counts
+  tickets_created   Int @default(0)
+  tickets_completed Int @default(0)
+  prs_created       Int @default(0)
+  prs_reviewed      Int @default(0)
+  deployments       Int @default(0)
+  ai_interactions   Int @default(0)
+
+  // AI-generated summary of the period
+  ai_summary String?
+
+  // Recent entities (for quick reference)
+  recent_ticket_ids String[] // Last 5 ticket IDs worked on
+  recent_pr_ids     String[] // Last 5 PR IDs
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, period_type, period_start])
+  @@index([user_id])
+  @@index([period_start, period_end])
+  @@map("QUAD_user_activity_summaries")
+}
+
+// ============================================================================
+// PHASE 1: RESOURCE SETUP (Hybrid: Templates + AI Personalization)
+// ============================================================================
+
+// Master templates (created by QUAD team, shared across all companies)
+model QUAD_resource_setup_templates {
+  id String @id @default(uuid()) @db.Uuid
+
+  // What resource
+  resource_type String @db.VarChar(50) // cloudflare, github, slack, jira, aws, gcp, vercel
+  resource_name String @db.VarChar(100) // Display name
+  category      String @db.VarChar(50) // dns, git, notifications, cloud, deployment, database
+
+  // OS-specific (or universal)
+  os String @default("all") @db.VarChar(20) // macos, windows, linux, all
+
+  // Steps (JSON array)
+  // [{ order: 1, title: "...", description: "...", action_type: "manual|command|input|verify", command?: "...", url?: "...", variables?: ["domain"] }]
+  steps Json
+
+  // Prerequisites
+  prerequisites String[] // ["Node.js 18+", "Git installed"]
+
+  // Verification
+  verification_command String? // Command to verify setup worked
+  verification_url     String? // URL to check
+
+  // Metadata
+  difficulty     String  @default("beginner") @db.VarChar(20) // beginner, intermediate, advanced
+  estimated_time Int? // minutes
+  icon_url       String? // Icon for UI
+  docs_url       String? // Link to official docs
+
+  // Version control
+  version          Int       @default(1)
+  last_verified_at DateTime?
+  verified_by      String?   @db.Uuid
+  changelog        String? // What changed in this version
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  user_setups QUAD_user_resource_setups[]
+
+  @@unique([resource_type, os])
+  @@index([resource_type])
+  @@index([category])
+  @@index([os])
+  @@index([is_active])
+  @@map("QUAD_resource_setup_templates")
+}
+
+// User's setup progress (tracks what they've done)
+model QUAD_user_resource_setups {
+  id        String  @id @default(uuid()) @db.Uuid
+  user_id   String  @db.Uuid
+  domain_id String? @db.Uuid
+
+  // What resource
+  resource_type String  @db.VarChar(50)
+  template_id   String? @db.Uuid // If using a template
+
+  // Progress
+  status          String @default("not_started") @db.VarChar(20) // not_started, in_progress, completed, failed, skipped
+  current_step    Int    @default(0)
+  total_steps     Int    @default(0)
+  steps_completed Int[] // Array of completed step numbers
+
+  // User's environment (for personalization)
+  user_os      String? @db.VarChar(20)
+  user_context Json? // { domain: "example.com", api_key: "...", project: "my-app" }
+
+  // AI-personalized steps (cached to avoid regenerating)
+  personalized_steps Json?
+
+  // Completion
+  started_at          DateTime?
+  completed_at        DateTime?
+  verification_passed Boolean?
+  verification_output String? // Output of verification command
+
+  // Notes/Issues
+  notes         String?
+  error_message String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  template QUAD_resource_setup_templates? @relation(fields: [template_id], references: [id], onDelete: SetNull)
+
+  @@unique([user_id, domain_id, resource_type])
+  @@index([user_id])
+  @@index([domain_id])
+  @@index([resource_type])
+  @@index([template_id])
+  @@index([status])
+  @@map("QUAD_user_resource_setups")
+}
+
+// Setup bundles - Chain multiple resources for complete onboarding
+// Example: "Full Stack Setup" = Domain + Cloudflare + GitHub + Zoho Email + Vercel
+model QUAD_setup_bundles {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Bundle info
+  bundle_name String  @db.VarChar(100) // "Full Stack Setup", "Email & Domain", "Git + CI/CD"
+  bundle_code String  @unique @db.VarChar(50) // "full_stack", "email_domain", "git_cicd"
+  description String?
+  icon_url    String?
+
+  // Resources in order
+  // [{ order: 1, resource_type: "domain", required: true }, { order: 2, resource_type: "cloudflare", required: true }]
+  resources Json
+
+  // Target audience
+  target_audience String? @db.VarChar(50) // startup, enterprise, solo_developer
+  difficulty      String  @default("beginner") @db.VarChar(20)
+  estimated_time  Int? // Total minutes for all resources
+
+  // Pricing (if any)
+  is_free   Boolean  @default(true)
+  price_usd Decimal? @db.Decimal(10, 2)
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  user_journeys QUAD_user_setup_journeys[]
+
+  @@index([bundle_code])
+  @@index([target_audience])
+  @@index([is_active])
+  @@map("QUAD_setup_bundles")
+}
+
+// User's journey through a bundle (tracks multi-resource progress)
+model QUAD_user_setup_journeys {
+  id        String @id @default(uuid()) @db.Uuid
+  user_id   String @db.Uuid
+  org_id    String @map("company_id") @db.Uuid
+  bundle_id String @db.Uuid
+
+  // Overall progress
+  status                 String @default("not_started") @db.VarChar(20) // not_started, in_progress, completed, abandoned
+  current_resource_index Int    @default(0) // Which resource they're on
+  total_resources        Int    @default(0)
+  resources_completed    Int    @default(0)
+
+  // User's collected info (shared across resources)
+  // { domain: "myapp.com", email: "admin@myapp.com", github_org: "mycompany" }
+  collected_context Json?
+
+  // Timestamps
+  started_at       DateTime?
+  completed_at     DateTime?
+  last_activity_at DateTime?
+
+  // AI assistance
+  ai_assistance_count             Int      @default(0) // How many times user asked AI for help
+  ai_generated_domain_suggestions String[] // If AI helped pick domain
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  bundle QUAD_setup_bundles @relation(fields: [bundle_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, bundle_id])
+  @@index([user_id])
+  @@index([org_id])
+  @@index([bundle_id])
+  @@index([status])
+  @@map("QUAD_user_setup_journeys")
+}
+
+// Domain suggestions and purchases (integrated with registrars)
+model QUAD_domain_operations {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+  org_id  String @map("company_id") @db.Uuid
+
+  // Operation type
+  operation_type String @db.VarChar(50) // search, check_availability, purchase, transfer, renew
+
+  // Domain info
+  domain_name  String   @db.VarChar(255)
+  tld          String   @db.VarChar(20) // com, io, app, dev
+  is_available Boolean?
+
+  // Registrar
+  registrar       String?  @db.VarChar(50) // namecheap, godaddy, cloudflare, google_domains
+  registrar_price Decimal? @db.Decimal(10, 2)
+  currency        String   @default("USD") @db.VarChar(3)
+
+  // Purchase details
+  purchase_years Int?
+  auto_renew     Boolean @default(true)
+  whois_privacy  Boolean @default(true)
+
+  // Status
+  status String @default("pending") @db.VarChar(50) // pending, available, unavailable, purchased, failed
+
+  // AI suggestions
+  ai_suggested    Boolean  @default(false)
+  ai_alternatives String[] // Alternative domain suggestions
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([org_id])
+  @@index([domain_name])
+  @@index([status])
+  @@map("QUAD_domain_operations")
+}
+
+// Verification requests - When QUAD needs user to provide/verify something
+model QUAD_verification_requests {
+  id        String  @id @default(uuid()) @db.Uuid
+  user_id   String  @db.Uuid
+  domain_id String? @db.Uuid
+  setup_id  String? @db.Uuid // Link to QUAD_user_resource_setups
+
+  // What needs verification
+  verification_type String @db.VarChar(50) // api_key, dns_record, webhook_url, oauth_token, ssl_cert, email_config
+  resource_type     String @db.VarChar(50) // cloudflare, github, slack, zoho, aws
+
+  // Instructions for user
+  title       String  @db.VarChar(255) // "Verify your Cloudflare API Key"
+  description String? // Detailed instructions
+  help_url    String? // Link to docs
+
+  // What user needs to provide
+  input_type   String  @db.VarChar(50) // text, password, file, oauth_redirect, none
+  input_label  String? @db.VarChar(100) // "API Key", "Webhook URL"
+  input_hint   String? // "Starts with 'cf_'"
+  input_value  String? // User's input (encrypted for sensitive)
+  is_sensitive Boolean @default(false) // If true, encrypt storage
+
+  // Validation
+  validation_method String? @db.VarChar(50) // api_call, dns_lookup, http_ping, regex, manual
+  validation_config Json? // { endpoint: "...", expected_status: 200, regex: "^cf_" }
+
+  // Status
+  status       String @default("pending") @db.VarChar(20) // pending, submitted, validating, verified, failed, expired
+  attempts     Int    @default(0)
+  max_attempts Int    @default(3)
+
+  // Results
+  validation_result Json? // { success: true, response: "...", error: null }
+  verified_at       DateTime?
+  error_message     String?
+
+  // Expiry
+  expires_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([domain_id])
+  @@index([setup_id])
+  @@index([verification_type])
+  @@index([status])
+  @@map("QUAD_verification_requests")
+}
+
+// Validated credentials storage (encrypted references to vault)
+model QUAD_validated_credentials {
+  id        String  @id @default(uuid()) @db.Uuid
+  org_id    String  @map("company_id") @db.Uuid
+  domain_id String? @db.Uuid
+
+  // Credential info
+  credential_type String @db.VarChar(50) // api_key, oauth_token, webhook_secret, ssh_key
+  resource_type   String @db.VarChar(50) // cloudflare, github, slack, aws, gcp
+  credential_name String @db.VarChar(100) // "Production Cloudflare", "GitHub Bot"
+
+  // Storage (reference to vault, NOT the actual secret)
+  vault_path     String @db.VarChar(255) // "quad/org-123/cloudflare/api_key"
+  vault_provider String @default("internal") @db.VarChar(50) // internal, hashicorp, aws_secrets
+
+  // Metadata
+  scopes            String[] // ["dns:read", "dns:write"]
+  expires_at        DateTime? // For tokens that expire
+  last_used_at      DateTime?
+  last_validated_at DateTime?
+
+  // Status
+  is_active        Boolean @default(true)
+  is_valid         Boolean @default(true) // Set to false if validation fails
+  validation_error String?
+
+  // Rotation
+  rotation_enabled Boolean   @default(false)
+  rotation_days    Int? // Rotate every N days
+  next_rotation_at DateTime?
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, resource_type, credential_name])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([resource_type])
+  @@index([is_active])
+  @@index([expires_at])
+  @@map("QUAD_validated_credentials")
+}
+
+// Health checks - Periodic validation that integrations still work
+model QUAD_integration_health_checks {
+  id            String  @id @default(uuid()) @db.Uuid
+  org_id        String  @map("company_id") @db.Uuid
+  credential_id String? @db.Uuid // Link to QUAD_validated_credentials
+
+  // What to check
+  resource_type String @db.VarChar(50) // cloudflare, github, slack
+  check_type    String @db.VarChar(50) // api_connectivity, dns_resolution, webhook_delivery, oauth_valid
+
+  // Check config
+  check_endpoint String? // URL or endpoint to check
+  check_config   Json? // { method: "GET", expected_status: 200, timeout_ms: 5000 }
+
+  // Schedule
+  check_interval_minutes Int       @default(60) // How often to check
+  last_check_at          DateTime?
+  next_check_at          DateTime?
+
+  // Results
+  status               String    @default("unknown") @db.VarChar(20) // healthy, degraded, unhealthy, unknown
+  consecutive_failures Int       @default(0)
+  last_success_at      DateTime?
+  last_failure_at      DateTime?
+  last_error           String?
+  response_time_ms     Int? // Last response time
+
+  // Alerting
+  alert_on_failure     Boolean   @default(true)
+  alert_after_failures Int       @default(3) // Alert after N consecutive failures
+  alert_sent_at        DateTime?
+
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([credential_id])
+  @@index([resource_type])
+  @@index([status])
+  @@index([next_check_at])
+  @@map("QUAD_integration_health_checks")
+}
+
+// ============================================================================
+// PHASE 1: AI PROVIDER CONFIG (Multi-provider support)
+// ============================================================================
+
+// Per-organization AI provider configuration
+model QUAD_ai_provider_config {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @unique @map("company_id") @db.Uuid // Maps to company_id in DB
+
+  // Provider settings
+  default_provider String   @default("claude") @db.VarChar(50) // claude, openai, gemini, ollama
+  provider_config  Json // { claude: { enabled: true, api_key_ref: "vault/..." }, openai: { enabled: false } }
+  fallback_order   String[] // ['claude', 'openai', 'ollama']
+
+  // Model preferences per tier
+  simple_model  String? @db.VarChar(100) // Override default simple model
+  medium_model  String? @db.VarChar(100) // Override default medium model
+  complex_model String? @db.VarChar(100) // Override default complex model
+
+  // Budget controls
+  monthly_budget_usd     Decimal? @db.Decimal(10, 2)
+  current_month_spent    Decimal  @default(0) @db.Decimal(10, 2)
+  budget_alert_threshold Decimal? @db.Decimal(3, 2) // 0.80 = alert at 80%
+  budget_alert_sent      Boolean  @default(false)
+
+  // Usage limits
+  max_requests_per_day   Int?
+  max_tokens_per_request Int?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  organization QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+
+  @@index([org_id])
+  @@index([default_provider])
+  @@map("QUAD_ai_provider_config")
+}
+
+// ============================================================================
+// PHASE 1: DATABASE AGENT
+// ============================================================================
+
+model QUAD_database_operations {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Operation info
+  operation_type String @db.VarChar(50) // sync_check, copy_data, anonymize, generate_sample
+
+  // Source/Target
+  source_env String? @db.VarChar(50) // DEV, QA, PROD
+  target_env String? @db.VarChar(50)
+
+  // Tables
+  tables_included String[] // List of table names
+  record_count    Int?
+
+  // Anonymization
+  anonymize_pii     Boolean  @default(false)
+  pii_fields_masked String[] // List of fields that were masked
+
+  // Status
+  status String @default("pending") @db.VarChar(50) // pending, pending_approval, in_progress, completed, failed
+
+  // Approval (for sensitive operations)
+  requires_approval Boolean   @default(false)
+  approved_by       String?   @db.Uuid
+  approved_at       DateTime?
+
+  // Execution
+  started_at    DateTime?
+  completed_at  DateTime?
+  error_message String?
+
+  initiated_by String   @db.Uuid
+  created_at   DateTime @default(now())
+
+  // Relations
+  domain QUAD_domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+
+  @@index([domain_id])
+  @@index([operation_type])
+  @@index([status])
+  @@map("QUAD_database_operations")
+}
+
+// ============================================================================
+// PHASE 1: CROWD-PULLING FEATURES (All API-accessible, Small Business + Enterprise)
+// ============================================================================
+
+// -----------------------------------------------------------------------------
+// Cycle Risk Predictor (Trajectory Predictor) - AI predicts cycle success/failure
+// Enterprise: Historical data, API export | Small Business: Basic risk alerts
+// -----------------------------------------------------------------------------
+model QUAD_cycle_risk_predictions {
+  id        String @id @default(uuid()) @db.Uuid
+  org_id    String @map("company_id") @db.Uuid
+  domain_id String @db.Uuid
+  cycle_id  String @db.Uuid
+
+  // Risk Assessment
+  risk_score Decimal @db.Decimal(3, 2) // 0.00 to 1.00 (higher = more risk)
+  risk_level String  @db.VarChar(20) // low, medium, high, critical
+  confidence Decimal @db.Decimal(3, 2) // AI confidence in prediction
+
+  // Risk Factors (JSON for flexibility)
+  // { factors: [{ name: "scope_creep", weight: 0.3, value: 0.8 }, ...] }
+  risk_factors Json
+
+  // Predictions
+  predicted_velocity   Int? // Predicted story points to complete
+  actual_velocity      Int? // Filled in after cycle ends
+  predicted_completion Decimal? @db.Decimal(3, 2) // % likely to complete all tickets
+  predicted_carryover  Int? // Tickets likely to carry over
+
+  // Alerts generated
+  alerts_generated String[] // ["resource_conflict", "deadline_risk", "scope_creep"]
+
+  // AI Details
+  model_used    String @db.VarChar(100)
+  input_tokens  Int?
+  output_tokens Int?
+
+  // Historical accuracy (updated after cycle ends)
+  was_accurate   Boolean?
+  accuracy_notes String?
+
+  // API Access (Enterprise feature)
+  api_accessible  Boolean   @default(true)
+  webhook_sent    Boolean   @default(false)
+  webhook_sent_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([cycle_id])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([cycle_id])
+  @@index([risk_level])
+  @@index([created_at])
+  @@map("QUAD_cycle_risk_predictions")
+}
+
+// -----------------------------------------------------------------------------
+// Auto Story Point Estimation - AI suggests story points based on description
+// Both: AI suggestions | Enterprise: Custom models, historical calibration
+// -----------------------------------------------------------------------------
+model QUAD_story_point_suggestions {
+  id        String @id @default(uuid()) @db.Uuid
+  org_id    String @map("company_id") @db.Uuid
+  domain_id String @db.Uuid
+  ticket_id String @db.Uuid
+
+  // Suggestion
+  suggested_points Int
+  confidence       Decimal @db.Decimal(3, 2)
+
+  // Factors that influenced suggestion
+  // { complexity: 0.7, dependencies: 0.3, similar_tickets: ["PROJ-45", "PROJ-67"] }
+  reasoning Json
+
+  // Similar tickets (for transparency)
+  similar_ticket_ids String[]
+  similar_ticket_avg Decimal? @db.Decimal(4, 1) // Average points of similar tickets
+
+  // User action
+  user_accepted    Boolean?
+  user_adjusted_to Int? // If user changed the suggestion
+  feedback         String? // User feedback on suggestion
+
+  // Model info
+  model_used    String  @db.VarChar(100)
+  model_version String? @db.VarChar(50)
+
+  // Enterprise: Custom calibration
+  calibration_factor Decimal? @db.Decimal(3, 2) // Org-specific adjustment
+
+  // API Access
+  api_accessible Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([ticket_id])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([ticket_id])
+  @@index([suggested_points])
+  @@map("QUAD_story_point_suggestions")
+}
+
+// -----------------------------------------------------------------------------
+// Technical Debt Scorer - Tracks codebase health
+// Both: Debt tracking | Enterprise: Trend analysis, API, custom rules
+// -----------------------------------------------------------------------------
+model QUAD_technical_debt_scores {
+  id            String  @id @default(uuid()) @db.Uuid
+  org_id        String  @map("company_id") @db.Uuid
+  domain_id     String  @db.Uuid
+  repository_id String? @db.Uuid
+
+  // Score (0-100, higher = healthier code)
+  overall_score  Int
+  previous_score Int? // For trend tracking
+
+  // Category breakdown
+  // { code_quality: 75, test_coverage: 60, documentation: 45, security: 80, dependencies: 65 }
+  category_scores Json
+
+  // Identified issues
+  // [{ type: "code_smell", severity: "medium", file: "src/app.ts", line: 45, description: "..." }]
+  issues Json
+
+  // Metrics
+  total_issues    Int @default(0)
+  critical_issues Int @default(0)
+  high_issues     Int @default(0)
+  medium_issues   Int @default(0)
+  low_issues      Int @default(0)
+
+  // Trends (Enterprise feature)
+  score_trend       String? @db.VarChar(20) // improving, stable, declining
+  trend_period_days Int     @default(30)
+
+  // Recommendations
+  // [{ priority: 1, action: "Increase test coverage for auth module", effort: "medium", impact: "high" }]
+  recommendations Json?
+
+  // Scan details
+  scan_type        String @db.VarChar(50) // full, incremental, pr_triggered
+  files_scanned    Int?
+  lines_analyzed   Int?
+  duration_seconds Int?
+
+  // External integrations (SonarQube, CodeClimate, etc.)
+  external_source     String? @db.VarChar(50)
+  external_report_url String?
+
+  // API Access
+  api_accessible Boolean  @default(true)
+  webhook_url    String? // Notify external systems
+  webhook_events String[] // ["score_dropped", "critical_issue"]
+
+  scanned_at DateTime @default(now())
+  created_at DateTime @default(now())
+
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([repository_id])
+  @@index([overall_score])
+  @@index([scanned_at])
+  @@map("QUAD_technical_debt_scores")
+}
+
+// -----------------------------------------------------------------------------
+// DORA Metrics - Deployment Frequency, Lead Time, MTTR, Change Failure Rate
+// Enterprise: Full DORA | Small Business: Simplified deployment metrics
+// -----------------------------------------------------------------------------
+model QUAD_dora_metrics {
+  id        String @id @default(uuid()) @db.Uuid
+  org_id    String @map("company_id") @db.Uuid
+  domain_id String @db.Uuid
+
+  // Period
+  period_type  String   @db.VarChar(20) // daily, weekly, monthly
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+
+  // 1. Deployment Frequency
+  deployment_count           Int      @default(0)
+  deployments_per_day        Decimal? @db.Decimal(5, 2)
+  deployment_frequency_level String?  @db.VarChar(20) // elite, high, medium, low
+
+  // 2. Lead Time for Changes (commit to production)
+  avg_lead_time_hours    Decimal? @db.Decimal(10, 2)
+  median_lead_time_hours Decimal? @db.Decimal(10, 2)
+  lead_time_level        String?  @db.VarChar(20) // elite, high, medium, low
+
+  // 3. Mean Time to Recovery (MTTR)
+  incident_count     Int      @default(0)
+  avg_recovery_hours Decimal? @db.Decimal(10, 2)
+  mttr_level         String?  @db.VarChar(20) // elite, high, medium, low
+
+  // 4. Change Failure Rate
+  failed_deployments  Int      @default(0)
+  change_failure_rate Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
+  failure_rate_level  String?  @db.VarChar(20) // elite, high, medium, low
+
+  // Overall DORA Level
+  overall_level String? @db.VarChar(20) // elite, high, medium, low
+
+  // Trends
+  deployment_trend   String? @db.VarChar(20) // improving, stable, declining
+  lead_time_trend    String? @db.VarChar(20)
+  mttr_trend         String? @db.VarChar(20)
+  failure_rate_trend String? @db.VarChar(20)
+
+  // Breakdown by environment (Enterprise)
+  // { dev: { deployments: 50, failures: 2 }, qa: {...}, prod: {...} }
+  env_breakdown Json?
+
+  // API & Integrations
+  api_accessible   Boolean   @default(true)
+  external_sync    Boolean   @default(false) // Sync to external dashboard
+  external_sync_at DateTime?
+
+  calculated_at DateTime @default(now())
+  created_at    DateTime @default(now())
+
+  @@unique([domain_id, period_type, period_start])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([period_start, period_end])
+  @@index([overall_level])
+  @@map("QUAD_dora_metrics")
+}
+
+// -----------------------------------------------------------------------------
+// AI Code Reviews - Automated PR review with AI
+// Both: Basic review | Enterprise: Custom rules, detailed analysis
+// -----------------------------------------------------------------------------
+model QUAD_ai_code_reviews {
+  id              String @id @default(uuid()) @db.Uuid
+  org_id          String @map("company_id") @db.Uuid
+  domain_id       String @db.Uuid
+  pull_request_id String @db.Uuid
+
+  // Review Status
+  status         String  @default("pending") @db.VarChar(20) // pending, in_progress, completed, failed
+  review_verdict String? @db.VarChar(20) // approved, needs_changes, flagged
+
+  // Overall Assessment
+  overall_score Int? // 0-100
+  confidence    Decimal? @db.Decimal(3, 2)
+
+  // Category Scores
+  // { code_quality: 80, security: 90, performance: 75, maintainability: 85, test_coverage: 60 }
+  category_scores Json?
+
+  // Issues Found
+  // [{ severity: "high", type: "security", file: "auth.ts", line: 45, message: "SQL injection risk" }]
+  issues Json
+
+  issue_count_critical Int @default(0)
+  issue_count_high     Int @default(0)
+  issue_count_medium   Int @default(0)
+  issue_count_low      Int @default(0)
+  issue_count_info     Int @default(0)
+
+  // Suggestions
+  // [{ type: "refactor", file: "utils.ts", suggestion: "Extract to helper function", code_snippet: "..." }]
+  suggestions Json?
+
+  // Files analyzed
+  files_reviewed Int?
+  lines_added    Int?
+  lines_removed  Int?
+
+  // Model info
+  model_used    String   @db.VarChar(100)
+  input_tokens  Int?
+  output_tokens Int?
+  cost_usd      Decimal? @db.Decimal(6, 4)
+
+  // Human override (Enterprise)
+  human_override    Boolean @default(false)
+  human_verdict     String? @db.VarChar(20)
+  human_reviewer_id String? @db.Uuid
+  human_notes       String?
+
+  // External posting
+  posted_to_pr Boolean   @default(false)
+  posted_at    DateTime?
+
+  // API Access
+  api_accessible Boolean @default(true)
+  webhook_url    String?
+
+  started_at   DateTime?
+  completed_at DateTime?
+  created_at   DateTime  @default(now())
+
+  @@unique([pull_request_id])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([pull_request_id])
+  @@index([status])
+  @@index([review_verdict])
+  @@map("QUAD_ai_code_reviews")
+}
+
+// -----------------------------------------------------------------------------
+// Auto Release Notes - AI-generated release notes from commits/PRs
+// Both: Auto-generate | Enterprise: Custom templates, multiple formats
+// -----------------------------------------------------------------------------
+model QUAD_release_notes {
+  id             String  @id @default(uuid()) @db.Uuid
+  org_id         String  @map("company_id") @db.Uuid
+  domain_id      String  @db.Uuid
+  environment_id String? @db.Uuid
+
+  // Release info
+  release_version String    @db.VarChar(50) // v1.2.3
+  release_name    String?   @db.VarChar(255) // "Spring Update"
+  release_date    DateTime? @db.Date
+
+  // Content (AI-generated)
+  summary          String? // One-line summary
+  content_markdown String // Full release notes in Markdown
+  content_html     String? // Rendered HTML (cached)
+  content_plain    String? // Plain text version
+
+  // Sections breakdown (for templates)
+  // { features: [...], bug_fixes: [...], breaking_changes: [...], deprecations: [...] }
+  sections Json?
+
+  // Source data
+  commits_included String[] // Commit SHAs
+  prs_included     String[] // PR IDs
+  tickets_resolved String[] // Ticket IDs
+
+  // Metrics
+  total_commits      Int      @default(0)
+  total_prs          Int      @default(0)
+  total_contributors Int      @default(0)
+  contributors       String[] // User IDs or names
+
+  // AI Generation
+  model_used        String? @db.VarChar(100)
+  ai_generated      Boolean @default(true)
+  generation_prompt String? // Custom prompt used (Enterprise)
+
+  // Editing
+  is_edited Boolean   @default(false)
+  edited_by String?   @db.Uuid
+  edited_at DateTime?
+
+  // Publishing
+  status       String    @default("draft") @db.VarChar(20) // draft, approved, published
+  published_at DateTime?
+  published_to String[] // ["github", "slack", "email", "website"]
+
+  // External links
+  github_release_url String?
+  changelog_url      String?
+
+  // API Access
+  api_accessible Boolean @default(true)
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([domain_id, release_version])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([environment_id])
+  @@index([status])
+  @@index([release_date])
+  @@map("QUAD_release_notes")
+}
+
+// -----------------------------------------------------------------------------
+// One-Click Rollback - Quick deployment rollback
+// Both: Basic rollback | Enterprise: Multi-step, approval workflow
+// -----------------------------------------------------------------------------
+model QUAD_rollback_operations {
+  id             String @id @default(uuid()) @db.Uuid
+  org_id         String @map("company_id") @db.Uuid
+  domain_id      String @db.Uuid
+  environment_id String @db.Uuid
+
+  // What to rollback
+  rollback_type String @db.VarChar(50) // deployment, database, config, full
+
+  // From -> To
+  current_version String? @db.VarChar(255) // Current state (commit SHA, version)
+  target_version  String  @db.VarChar(255) // Rollback to this
+  deployment_id   String? @db.Uuid // Original deployment being rolled back
+
+  // Reason
+  reason      String  @db.VarChar(500)
+  incident_id String? @db.Uuid // If triggered by incident
+
+  // Status
+  status String @default("pending") @db.VarChar(20) // pending, approved, in_progress, completed, failed, cancelled
+
+  // Approval (Enterprise)
+  requires_approval Boolean   @default(false)
+  approved_by       String?   @db.Uuid
+  approved_at       DateTime?
+  rejection_reason  String?
+
+  // Execution steps
+  // [{ step: 1, action: "stop_traffic", status: "completed" }, { step: 2, action: "deploy_previous", status: "in_progress" }]
+  steps        Json?
+  current_step Int   @default(0)
+  total_steps  Int   @default(0)
+
+  // Results
+  started_at       DateTime?
+  completed_at     DateTime?
+  duration_seconds Int?
+  error_message    String?
+
+  // Post-rollback
+  verification_passed Boolean?
+  verification_notes  String?
+  health_check_url    String?
+
+  // Notifications
+  notifications_sent String[] // ["slack", "email", "pagerduty"]
+
+  // API Access
+  api_accessible Boolean @default(true)
+  api_triggered  Boolean @default(false) // True if triggered via API
+
+  initiated_by String   @db.Uuid
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([environment_id])
+  @@index([status])
+  @@index([created_at])
+  @@map("QUAD_rollback_operations")
+}
+
+// -----------------------------------------------------------------------------
+// Secret Scanner - Find exposed secrets in code
+// Both: Basic scanning | Enterprise: Custom patterns, rotation workflows
+// -----------------------------------------------------------------------------
+model QUAD_secret_scans {
+  id            String  @id @default(uuid()) @db.Uuid
+  org_id        String  @map("company_id") @db.Uuid
+  domain_id     String  @db.Uuid
+  repository_id String? @db.Uuid
+
+  // Scan info
+  scan_type String @db.VarChar(50) // full, incremental, pr_check, commit_check
+  trigger   String @db.VarChar(50) // manual, scheduled, push, pr
+
+  // Results
+  status        String @default("pending") @db.VarChar(20) // pending, in_progress, completed, failed
+  secrets_found Int    @default(0)
+
+  // Findings
+  // [{ type: "aws_key", severity: "critical", file: ".env", line: 5, snippet: "AWS_KEY=AKI...", remediation: "..." }]
+  findings Json
+
+  findings_critical Int @default(0)
+  findings_high     Int @default(0)
+  findings_medium   Int @default(0)
+  findings_low      Int @default(0)
+
+  // Files scanned
+  files_scanned      Int?
+  files_with_secrets Int  @default(0)
+
+  // Secret types found
+  secret_types String[] // ["aws_key", "github_token", "api_key", "password"]
+
+  // Resolution tracking
+  all_resolved        Boolean   @default(false)
+  resolved_count      Int       @default(0)
+  resolution_deadline DateTime?
+
+  // Notifications
+  alert_sent     Boolean   @default(false)
+  alert_sent_at  DateTime?
+  alert_channels String[] // ["slack", "email", "pagerduty"]
+
+  // Scan details
+  scanner_version String?  @db.VarChar(50)
+  custom_patterns String[] // Company-specific patterns (Enterprise)
+
+  started_at       DateTime?
+  completed_at     DateTime?
+  duration_seconds Int?
+
+  // API Access
+  api_accessible Boolean @default(true)
+  webhook_url    String?
+
+  triggered_by String?  @db.Uuid
+  created_at   DateTime @default(now())
+
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([repository_id])
+  @@index([status])
+  @@index([secrets_found])
+  @@index([created_at])
+  @@map("QUAD_secret_scans")
+}
+
+// Secret rotation tracking (Enterprise feature)
+model QUAD_secret_rotations {
+  id            String @id @default(uuid()) @db.Uuid
+  org_id        String @map("company_id") @db.Uuid
+  credential_id String @db.Uuid // Link to QUAD_validated_credentials
+
+  // Rotation info
+  rotation_reason String  @db.VarChar(50) // scheduled, exposed, policy, manual
+  scan_id         String? @db.Uuid // If triggered by secret scan
+
+  // Status
+  status String @default("pending") @db.VarChar(20) // pending, in_progress, completed, failed, cancelled
+
+  // Steps
+  // [{ step: "generate_new", status: "completed" }, { step: "update_vault", status: "in_progress" }]
+  steps Json?
+
+  // Old/New tracking (references, not actual secrets)
+  old_credential_ref String? @db.VarChar(255)
+  new_credential_ref String? @db.VarChar(255)
+
+  // Affected systems
+  systems_to_update String[] // ["production_api", "worker_service"]
+  systems_updated   String[]
+
+  // Results
+  started_at    DateTime?
+  completed_at  DateTime?
+  error_message String?
+
+  // Notifications
+  notifications_sent String[]
+
+  initiated_by String   @db.Uuid
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([credential_id])
+  @@index([status])
+  @@index([created_at])
+  @@map("QUAD_secret_rotations")
+}
+
+// -----------------------------------------------------------------------------
+// Incident Runbooks - Automated incident response
+// Both: Basic runbooks | Enterprise: Custom workflows, integrations
+// -----------------------------------------------------------------------------
+model QUAD_incident_runbooks {
+  id        String  @id @default(uuid()) @db.Uuid
+  org_id    String  @map("company_id") @db.Uuid
+  domain_id String? @db.Uuid // Optional - can be org-wide
+
+  // Runbook info
+  name          String  @db.VarChar(255)
+  description   String?
+  incident_type String  @db.VarChar(50) // deployment_failure, service_down, database_issue, security_breach
+
+  // Trigger conditions
+  // { metric: "error_rate", operator: ">", threshold: 0.05, duration_minutes: 5 }
+  trigger_conditions Json?
+  auto_trigger       Boolean @default(false)
+
+  // Steps
+  // [{ order: 1, action: "notify", config: { channels: ["slack", "pagerduty"] } }, ...]
+  steps Json
+
+  // Escalation
+  // { levels: [{ delay_minutes: 15, notify: ["team_lead"] }, { delay_minutes: 30, notify: ["manager"] }] }
+  escalation_policy Json?
+
+  // Integrations
+  slack_channel     String? @db.VarChar(100)
+  pagerduty_service String? @db.VarChar(100)
+  webhook_url       String?
+
+  // Usage
+  times_triggered        Int       @default(0)
+  last_triggered_at      DateTime?
+  avg_resolution_minutes Int?
+
+  // Status
+  is_active   Boolean @default(true)
+  is_template Boolean @default(false) // If true, can be copied by others
+
+  // API Access
+  api_accessible      Boolean @default(true)
+  api_trigger_enabled Boolean @default(true) // Can be triggered via API
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  executions QUAD_runbook_executions[]
+
+  @@unique([org_id, name])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([incident_type])
+  @@index([is_active])
+  @@map("QUAD_incident_runbooks")
+}
+
+// Runbook execution history
+model QUAD_runbook_executions {
+  id         String @id @default(uuid()) @db.Uuid
+  runbook_id String @db.Uuid
+
+  // Trigger info
+  trigger_type     String  @db.VarChar(50) // manual, auto, api, alert
+  trigger_source   String? // Alert ID, API call ID, etc.
+  incident_summary String?
+
+  // Status
+  status String @default("in_progress") @db.VarChar(20) // in_progress, completed, failed, aborted
+
+  // Step execution
+  // [{ step: 1, status: "completed", started_at: "...", completed_at: "...", output: "..." }]
+  step_results Json
+
+  current_step Int @default(1)
+  total_steps  Int
+
+  // Timing
+  started_at       DateTime  @default(now())
+  completed_at     DateTime?
+  duration_minutes Int?
+
+  // Resolution
+  resolved         Boolean @default(false)
+  resolution_notes String?
+
+  // Escalation
+  escalation_level Int       @default(0)
+  escalated_at     DateTime?
+
+  triggered_by String?  @db.Uuid
+  resolved_by  String?  @db.Uuid
+  created_at   DateTime @default(now())
+
+  // Relations
+  runbook QUAD_incident_runbooks @relation(fields: [runbook_id], references: [id], onDelete: Cascade)
+
+  @@index([runbook_id])
+  @@index([status])
+  @@index([started_at])
+  @@map("QUAD_runbook_executions")
+}
+
+// -----------------------------------------------------------------------------
+// Slack Bot Integration - Commands and responses
+// Enterprise: Custom commands, workflows | Small Business: Basic commands
+// -----------------------------------------------------------------------------
+model QUAD_slack_bot_commands {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Command definition
+  command     String  @db.VarChar(50) // /quad-status, /quad-deploy, /quad-ticket
+  description String  @db.VarChar(255)
+  usage       String? // "/quad-deploy <env> <version>"
+
+  // Handler
+  handler_type   String @db.VarChar(50) // built_in, custom, api_forward
+  handler_config Json? // { action: "deploy", params: [...] }
+
+  // Permissions
+  allowed_roles    String[] // ["admin", "developer"]
+  allowed_channels String[] // Channel IDs, empty = all
+
+  // Response
+  response_type     String  @default("ephemeral") @db.VarChar(20) // ephemeral, in_channel
+  response_template String? // Custom response template
+
+  // Usage tracking
+  times_used   Int       @default(0)
+  last_used_at DateTime?
+  last_used_by String?
+
+  // Status
+  is_active Boolean @default(true)
+  is_custom Boolean @default(false) // Enterprise: custom commands
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, command])
+  @@index([org_id])
+  @@index([command])
+  @@index([is_active])
+  @@map("QUAD_slack_bot_commands")
+}
+
+// Slack message history (for context and analytics)
+model QUAD_slack_messages {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Slack info
+  slack_team_id    String @db.VarChar(50)
+  slack_channel_id String @db.VarChar(50)
+  slack_user_id    String @db.VarChar(50)
+  slack_message_ts String @db.VarChar(50) // Slack timestamp
+
+  // Content
+  message_type String  @db.VarChar(50) // command, mention, thread_reply, dm
+  command_used String? @db.VarChar(50)
+  message_text String?
+
+  // QUAD's response
+  response_sent Boolean @default(false)
+  response_text String?
+  response_ts   String? @db.VarChar(50)
+
+  // Entity linking
+  linked_entity_type String? @db.VarChar(50) // ticket, deployment, pr
+  linked_entity_id   String? @db.Uuid
+
+  // AI processing (if any)
+  ai_processed Boolean @default(false)
+  ai_intent    String? @db.VarChar(50)
+
+  created_at DateTime @default(now())
+
+  @@index([org_id])
+  @@index([slack_channel_id])
+  @@index([slack_user_id])
+  @@index([message_type])
+  @@index([created_at])
+  @@map("QUAD_slack_messages")
+}
+
+// -----------------------------------------------------------------------------
+// Developer Onboarding - Checklist and progress tracking
+// Both: Basic checklist | Enterprise: Custom checklists, templates, analytics
+// -----------------------------------------------------------------------------
+model QUAD_developer_onboarding_templates {
+  id        String  @id @default(uuid()) @db.Uuid
+  org_id    String  @map("company_id") @db.Uuid
+  domain_id String? @db.Uuid // Optional - can be org-wide
+
+  // Template info
+  name        String  @db.VarChar(255)
+  description String?
+  role_type   String? @db.VarChar(50) // frontend, backend, fullstack, devops, qa
+
+  // Checklist items
+  // [{ order: 1, category: "access", title: "Get GitHub access", description: "...", estimated_hours: 0.5, required: true }]
+  checklist_items Json
+
+  total_items     Int
+  estimated_hours Decimal? @db.Decimal(5, 2)
+
+  // Automations
+  // { github_invite: { enabled: true, org: "company", team: "developers" } }
+  automations Json?
+
+  // Status
+  is_active  Boolean @default(true)
+  is_default Boolean @default(false) // Default for new developers
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  onboarding_progress QUAD_developer_onboarding_progress[]
+
+  @@unique([org_id, name])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([role_type])
+  @@index([is_active])
+  @@map("QUAD_developer_onboarding_templates")
+}
+
+// Individual developer's onboarding progress
+model QUAD_developer_onboarding_progress {
+  id          String  @id @default(uuid()) @db.Uuid
+  user_id     String  @db.Uuid // The new developer
+  template_id String  @db.Uuid
+  org_id      String  @map("company_id") @db.Uuid
+  domain_id   String? @db.Uuid
+
+  // Progress
+  status          String  @default("not_started") @db.VarChar(20) // not_started, in_progress, completed, stalled
+  items_completed Int     @default(0)
+  total_items     Int
+  completion_pct  Decimal @default(0) @db.Decimal(5, 2)
+
+  // Item-level progress
+  // { "item_1": { completed: true, completed_at: "...", notes: "..." }, "item_2": { completed: false } }
+  item_progress Json
+
+  // Blockers
+  current_blockers String[]
+  blocker_notes    String?
+
+  // Assigned buddy/mentor
+  buddy_user_id   String? @db.Uuid
+  manager_user_id String? @db.Uuid
+
+  // Timing
+  started_at        DateTime?
+  target_completion DateTime? @db.Date
+  completed_at      DateTime?
+  days_to_complete  Int?
+
+  // Feedback (after completion)
+  feedback_rating Int? // 1-5
+  feedback_notes  String?
+
+  // API Access
+  api_accessible Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  template QUAD_developer_onboarding_templates @relation(fields: [template_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, template_id])
+  @@index([user_id])
+  @@index([template_id])
+  @@index([org_id])
+  @@index([status])
+  @@index([buddy_user_id])
+  @@map("QUAD_developer_onboarding_progress")
+}
+
+// -----------------------------------------------------------------------------
+// Cost Estimates - Deployment and infrastructure cost tracking
+// Both: Basic estimates | Enterprise: Detailed breakdown, forecasting
+// -----------------------------------------------------------------------------
+model QUAD_cost_estimates {
+  id        String @id @default(uuid()) @db.Uuid
+  org_id    String @map("company_id") @db.Uuid
+  domain_id String @db.Uuid
+
+  // Period
+  period_type  String   @db.VarChar(20) // daily, weekly, monthly
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+
+  // Totals
+  total_cost_usd Decimal @db.Decimal(12, 2)
+  estimated      Boolean @default(true) // False if actual cost from billing
+  currency       String  @default("USD") @db.VarChar(3)
+
+  // Breakdown by category
+  // { compute: 150.50, database: 75.20, storage: 25.00, ai_tokens: 12.50, bandwidth: 8.00 }
+  cost_breakdown Json
+
+  // Environment breakdown
+  // { dev: 50, qa: 100, prod: 350 }
+  env_breakdown Json?
+
+  // AI Token costs (detailed)
+  ai_token_breakdown Json? // { claude: { input: 10000, output: 5000, cost: 0.50 }, openai: {...} }
+
+  // Deployment costs
+  deployment_count    Int      @default(0)
+  avg_deployment_cost Decimal? @db.Decimal(10, 2)
+
+  // Trends
+  previous_period_cost Decimal? @db.Decimal(12, 2)
+  cost_change_pct      Decimal? @db.Decimal(5, 2) // % change from previous period
+  cost_trend           String?  @db.VarChar(20) // increasing, stable, decreasing
+
+  // Budget tracking (Enterprise)
+  budget_usd        Decimal? @db.Decimal(12, 2)
+  budget_used_pct   Decimal? @db.Decimal(5, 2)
+  budget_alert_sent Boolean  @default(false)
+
+  // Forecasting (Enterprise)
+  forecast_next_period Decimal? @db.Decimal(12, 2)
+  forecast_confidence  Decimal? @db.Decimal(3, 2)
+
+  // Recommendations
+  // [{ category: "compute", recommendation: "Right-size instances", potential_savings: 50 }]
+  cost_recommendations Json?
+  potential_savings    Decimal? @db.Decimal(12, 2)
+
+  // External sources
+  cloud_billing_synced Boolean @default(false)
+  cloud_billing_ref    String? // Reference to cloud billing report
+
+  // API Access
+  api_accessible Boolean @default(true)
+  webhook_url    String? // Cost alerts
+
+  calculated_at DateTime @default(now())
+  created_at    DateTime @default(now())
+
+  @@unique([domain_id, period_type, period_start])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([period_start, period_end])
+  @@map("QUAD_cost_estimates")
+}
+
+// -----------------------------------------------------------------------------
+// API Access Configuration - Control external API access to QUAD features
+// Enterprise only: Full API access | Small Business: Limited endpoints
+// -----------------------------------------------------------------------------
+model QUAD_api_access_config {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @unique @map("company_id") @db.Uuid
+
+  // Global settings
+  api_enabled           Boolean @default(true)
+  rate_limit_per_minute Int     @default(60)
+  rate_limit_per_day    Int     @default(10000)
+
+  // Allowed endpoints (Enterprise: all, Small Business: limited)
+  // { tickets: true, deployments: true, dora_metrics: true, code_reviews: false }
+  endpoint_access Json
+
+  // Authentication
+  api_key_hash       String?   @db.VarChar(255) // Hashed API key
+  api_key_prefix     String?   @db.VarChar(10) // First few chars for identification
+  api_key_created_at DateTime?
+  api_key_last_used  DateTime?
+
+  // Webhook settings
+  webhook_enabled     Boolean  @default(false)
+  webhook_url         String?
+  webhook_secret_hash String?  @db.VarChar(255)
+  webhook_events      String[] // ["ticket.created", "deployment.completed", "risk.high"]
+
+  // IP allowlist (Enterprise)
+  ip_allowlist_enabled Boolean  @default(false)
+  ip_allowlist         String[]
+
+  // Audit
+  requests_today      Int       @default(0)
+  requests_this_month Int       @default(0)
+  last_request_at     DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@map("QUAD_api_access_config")
+}
+
+// API request audit log
+model QUAD_api_request_logs {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Request info
+  endpoint   String  @db.VarChar(255)
+  method     String  @db.VarChar(10)
+  ip_address String? @db.VarChar(50)
+  user_agent String?
+
+  // Response
+  status_code      Int
+  response_time_ms Int?
+  error_message    String?
+
+  // Rate limiting
+  rate_limit_remaining Int?
+
+  created_at DateTime @default(now())
+
+  @@index([org_id])
+  @@index([endpoint])
+  @@index([status_code])
+  @@index([created_at])
+  @@map("QUAD_api_request_logs")
 }

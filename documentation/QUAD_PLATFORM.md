@@ -136,12 +136,14 @@ Customer's Private Cloud (AWS/GCP/Azure/On-Premise)
 
 | Table | Purpose | Records (Est.) |
 |-------|---------|----------------|
-| `QUAD_companies` | Company accounts | ~100 companies |
+| `QUAD_organizations` | Organization accounts | ~100 organizations |
 | `QUAD_users` | User accounts (RBAC) | ~500 users |
-| `QUAD_company_integrations` | Enabled integrations | ~300 records |
+| `QUAD_org_integrations` | Enabled integrations | ~300 records |
 | `QUAD_agent_downloads` | Download audit trail | ~2,000 downloads |
 | `QUAD_sessions` | Active sessions (JWT) | ~50-100 active |
 | `QUAD_login_codes` | Passwordless login codes | ~10-20 active |
+
+> **Note:** The `company_id` column in database tables maps to `org_id` in Prisma for code clarity. API responses may still use `company_id` for backward compatibility.
 
 **Shared Database:**
 - QUAD Platform uses NutriNine PostgreSQL database

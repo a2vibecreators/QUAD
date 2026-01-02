@@ -15,8 +15,9 @@ const JWT_EXPIRES_IN = '24h';
 
 /**
  * User type (from Prisma)
+ * Note: org_id maps to company_id column in DB via @map directive
  */
-export type QuadUser = Pick<QUAD_users, 'id' | 'company_id' | 'email' | 'role' | 'full_name' | 'is_active'>;
+export type QuadUser = Pick<QUAD_users, 'id' | 'org_id' | 'email' | 'role' | 'full_name' | 'is_active'>;
 
 /**
  * JWT payload interface
@@ -57,7 +58,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export function generateToken(user: QuadUser): string {
   const payload: JWTPayload = {
     userId: user.id,
-    companyId: user.company_id,
+    companyId: user.org_id,  // org_id maps to company_id column
     email: user.email,
     role: user.role,
   };
@@ -151,7 +152,7 @@ export async function getUserByEmail(email: string): Promise<QuadUser | null> {
     where: { email },
     select: {
       id: true,
-      company_id: true,
+      org_id: true,
       email: true,
       role: true,
       full_name: true,
@@ -170,7 +171,7 @@ export async function getUserById(userId: string): Promise<QuadUser | null> {
     where: { id: userId },
     select: {
       id: true,
-      company_id: true,
+      org_id: true,
       email: true,
       role: true,
       full_name: true,
@@ -189,7 +190,7 @@ export async function getUserWithPassword(email: string) {
     where: { email },
     select: {
       id: true,
-      company_id: true,
+      org_id: true,
       email: true,
       password_hash: true,
       role: true,
@@ -203,7 +204,7 @@ export async function getUserWithPassword(email: string) {
  * Create a new user
  */
 export async function createUser(data: {
-  companyId: string;
+  companyId: string;  // Keep param name for backwards compatibility
   email: string;
   password: string;
   fullName?: string;
@@ -213,7 +214,7 @@ export async function createUser(data: {
 
   const user = await prisma.qUAD_users.create({
     data: {
-      company_id: data.companyId,
+      org_id: data.companyId,  // org_id maps to company_id column
       email: data.email,
       password_hash: passwordHash,
       full_name: data.fullName,
@@ -221,7 +222,7 @@ export async function createUser(data: {
     },
     select: {
       id: true,
-      company_id: true,
+      org_id: true,
       email: true,
       role: true,
       full_name: true,

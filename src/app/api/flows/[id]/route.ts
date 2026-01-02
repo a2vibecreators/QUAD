@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id },
       include: {
         domain: {
-          select: { id: true, name: true, company_id: true }
+          select: { id: true, name: true, org_id: true }
         },
         assignee: {
           select: {
@@ -59,8 +59,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Flow not found' }, { status: 404 });
     }
 
-    // Verify flow belongs to user's company
-    if (flow.domain.company_id !== payload.companyId) {
+    // Verify flow belongs to user's organization
+    if (flow.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -114,7 +114,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const existing = await prisma.qUAD_flows.findUnique({
       where: { id },
       include: {
-        domain: { select: { company_id: true } }
+        domain: { select: { org_id: true } }
       }
     });
 
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Flow not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -250,7 +250,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const existing = await prisma.qUAD_flows.findUnique({
       where: { id },
       include: {
-        domain: { select: { company_id: true } }
+        domain: { select: { org_id: true } }
       }
     });
 
@@ -258,7 +258,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Flow not found' }, { status: 404 });
     }
 
-    if (existing.domain.company_id !== payload.companyId) {
+    if (existing.domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

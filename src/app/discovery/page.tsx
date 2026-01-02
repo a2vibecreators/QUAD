@@ -3,128 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import PageNavigation from "@/components/PageNavigation";
-
-// Pain Point Categories with root causes and QUAD solutions
-const painCategories = [
-  {
-    id: "delivery",
-    icon: "🚀",
-    title: "Delivery & Timeline Issues",
-    symptoms: [
-      { id: "d1", text: "Projects are always late", weight: 3 },
-      { id: "d2", text: "Estimates are wildly inaccurate", weight: 2 },
-      { id: "d3", text: "Scope creep is constant", weight: 2 },
-      { id: "d4", text: "Sprint commitments never met", weight: 3 },
-    ],
-    rootCauses: [
-      "No standardized estimation process",
-      "Requirements change mid-sprint",
-      "Hidden complexity discovered late",
-      "Dependencies not tracked",
-    ],
-    quadSolution: "QUAD's Documentation-First approach ensures requirements are crystal clear BEFORE development. AI agents assist with accurate estimation using historical data.",
-  },
-  {
-    id: "quality",
-    icon: "🐛",
-    title: "Quality & Rework Problems",
-    symptoms: [
-      { id: "q1", text: "Too many production bugs", weight: 3 },
-      { id: "q2", text: "Lots of time spent on rework", weight: 3 },
-      { id: "q3", text: "QA finds issues late in cycle", weight: 2 },
-      { id: "q4", text: "Technical debt keeps growing", weight: 2 },
-    ],
-    rootCauses: [
-      "Inadequate test coverage",
-      "QA involved too late",
-      "No code review standards",
-      "Documentation not maintained",
-    ],
-    quadSolution: "Circle 3 (QA) is involved from Day 1 in QUAD. Test Agent writes tests as specs are created. Review Agent catches issues before they reach QA.",
-  },
-  {
-    id: "communication",
-    icon: "💬",
-    title: "Communication & Alignment",
-    symptoms: [
-      { id: "c1", text: "Business and dev don't understand each other", weight: 3 },
-      { id: "c2", text: "Same questions asked repeatedly", weight: 2 },
-      { id: "c3", text: "Knowledge lost when people leave", weight: 3 },
-      { id: "c4", text: "Status updates take too long to prepare", weight: 1 },
-    ],
-    rootCauses: [
-      "No single source of truth",
-      "Documentation scattered/outdated",
-      "No standardized terminology",
-      "Information silos between teams",
-    ],
-    quadSolution: "QUAD's Source of Truth flow ensures all knowledge lives in JIRA. Auto-generated documentation means nothing gets outdated. AI agents provide instant status.",
-  },
-  {
-    id: "scale",
-    icon: "📈",
-    title: "Scaling & Growth Challenges",
-    symptoms: [
-      { id: "s1", text: "Hard to onboard new developers", weight: 2 },
-      { id: "s2", text: "Processes don't scale with team size", weight: 3 },
-      { id: "s3", text: "Senior devs spend time on repetitive tasks", weight: 2 },
-      { id: "s4", text: "Can't add projects without adding people", weight: 3 },
-    ],
-    rootCauses: [
-      "Tribal knowledge not documented",
-      "No automation of repetitive work",
-      "Heavy dependence on key people",
-      "Manual processes everywhere",
-    ],
-    quadSolution: "AI Agents in QUAD handle 60-80% of repetitive work. Circle 4 (Infrastructure) automates deployments. Documentation becomes onboarding material automatically.",
-  },
-  {
-    id: "visibility",
-    icon: "👀",
-    title: "Visibility & Metrics",
-    symptoms: [
-      { id: "v1", text: "Don't know true project health until too late", weight: 3 },
-      { id: "v2", text: "No reliable velocity metrics", weight: 2 },
-      { id: "v3", text: "Can't compare team performance objectively", weight: 2 },
-      { id: "v4", text: "Surprises in status meetings", weight: 2 },
-    ],
-    rootCauses: [
-      "Manual status reporting",
-      "Data spread across tools",
-      "No standardized metrics",
-      "Reactive not proactive tracking",
-    ],
-    quadSolution: "QUAD Dashboard shows real-time health with statistical metrics (μ velocity, σ deviation). Directors see variance across teams instantly. No more status meetings.",
-  },
-  {
-    id: "ai",
-    icon: "🤖",
-    title: "AI/Automation Adoption",
-    symptoms: [
-      { id: "a1", text: "Tried AI tools but didn't stick", weight: 2 },
-      { id: "a2", text: "Don't know where AI can actually help", weight: 2 },
-      { id: "a3", text: "Worried about AI quality/hallucinations", weight: 2 },
-      { id: "a4", text: "Team resistant to AI adoption", weight: 1 },
-    ],
-    rootCauses: [
-      "No structured AI integration approach",
-      "AI used randomly, not systematically",
-      "No human-in-the-loop safeguards",
-      "Unclear AI permissions/boundaries",
-    ],
-    quadSolution: "QUAD defines exactly what AI agents can/cannot do. Human approval at critical gates. Gradual adoption levels (0D→4D) let you control the pace.",
-  },
-];
-
-// Readiness indicators
-const readinessQuestions = [
-  { id: "r1", text: "Do you use JIRA or similar project management tool?", critical: true },
-  { id: "r2", text: "Do you use Git for source control?", critical: true },
-  { id: "r3", text: "Do you have defined sprints or iterations?", critical: false },
-  { id: "r4", text: "Is leadership committed to process change?", critical: true },
-  { id: "r5", text: "Do you have at least one dedicated BA or Product Owner?", critical: false },
-  { id: "r6", text: "Are you open to AI-assisted development?", critical: false },
-];
+import { useDomain } from "@/contexts/DomainContext";
 
 // Adoption level recommendations
 const adoptionLevels = [
@@ -138,10 +17,15 @@ const adoptionLevels = [
 type Step = "intro" | "symptoms" | "readiness" | "diagnosis" | "recommendation";
 
 export default function DiscoveryPage() {
+  const { config } = useDomain();
   const [currentStep, setCurrentStep] = useState<Step>("intro");
   const [selectedSymptoms, setSelectedSymptoms] = useState<Set<string>>(new Set());
   const [readinessAnswers, setReadinessAnswers] = useState<Record<string, boolean>>({});
   const [showDetails, setShowDetails] = useState<string | null>(null);
+
+  // Get domain-specific data
+  const painCategories = config.painCategories;
+  const readinessQuestions = config.readinessQuestions;
 
   // Calculate pain score
   const calculatePainScore = () => {
@@ -254,13 +138,20 @@ export default function DiscoveryPage() {
         {/* Step 1: Introduction */}
         {currentStep === "intro" && (
           <div className="text-center">
+            {/* Domain Indicator */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/50 border border-slate-700 rounded-full mb-6">
+              <span className="text-xl">{config.icon}</span>
+              <span className="text-sm text-slate-300">{config.name}</span>
+              <span className="text-xs text-slate-500">• Change in header ↑</span>
+            </div>
+
             <div className="text-6xl mb-6">🔍</div>
             <h1 className="text-4xl font-bold mb-4">QUAD Discovery</h1>
             <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
               Not sure if QUAD is right for you? Let&apos;s find out together.
               <br />
               <span className="text-slate-400 text-base">
-                This guided assessment will help diagnose your challenges and recommend the best path forward.
+                {config.description}
               </span>
             </p>
 
@@ -406,36 +297,72 @@ export default function DiscoveryPage() {
               Let&apos;s see if your organization is ready for QUAD adoption.
             </p>
 
-            <div className="space-y-4">
-              {readinessQuestions.map((question) => (
-                <button
-                  key={question.id}
-                  onClick={() => toggleReadiness(question.id)}
-                  className={`w-full p-4 rounded-xl text-left transition-all flex items-center justify-between ${
-                    readinessAnswers[question.id]
-                      ? "bg-green-500/20 border-green-500 border"
-                      : "bg-slate-800/50 border border-slate-700 hover:border-slate-500"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        readinessAnswers[question.id]
-                          ? "border-green-500 bg-green-500 text-white"
-                          : "border-slate-500"
-                      }`}
-                    >
-                      {readinessAnswers[question.id] && "✓"}
-                    </span>
-                    <span>{question.text}</span>
-                  </div>
-                  {question.critical && (
-                    <span className="px-2 py-1 bg-red-500/20 text-red-300 rounded text-xs">
-                      Required
-                    </span>
-                  )}
-                </button>
-              ))}
+            {/* Required Questions */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-red-400 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                REQUIRED - Must have these to start
+              </h3>
+              <div className="space-y-3">
+                {readinessQuestions.filter(q => q.critical).map((question) => (
+                  <button
+                    key={question.id}
+                    onClick={() => toggleReadiness(question.id)}
+                    className={`w-full p-4 rounded-xl text-left transition-all flex items-center justify-between ${
+                      readinessAnswers[question.id]
+                        ? "bg-green-500/20 border-green-500 border"
+                        : "bg-slate-800/50 border border-red-500/30 hover:border-red-500/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          readinessAnswers[question.id]
+                            ? "border-green-500 bg-green-500 text-white"
+                            : "border-red-400"
+                        }`}
+                      >
+                        {readinessAnswers[question.id] && "✓"}
+                      </span>
+                      <span>{question.text}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Optional Questions */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-400 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 bg-slate-500 rounded-full"></span>
+                OPTIONAL - Nice to have
+              </h3>
+              <div className="space-y-3">
+                {readinessQuestions.filter(q => !q.critical).map((question) => (
+                  <button
+                    key={question.id}
+                    onClick={() => toggleReadiness(question.id)}
+                    className={`w-full p-4 rounded-xl text-left transition-all flex items-center justify-between ${
+                      readinessAnswers[question.id]
+                        ? "bg-green-500/20 border-green-500 border"
+                        : "bg-slate-800/50 border border-slate-700 hover:border-slate-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                          readinessAnswers[question.id]
+                            ? "border-green-500 bg-green-500 text-white"
+                            : "border-slate-500"
+                        }`}
+                      >
+                        {readinessAnswers[question.id] && "✓"}
+                      </span>
+                      <span>{question.text}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="flex justify-between mt-8">

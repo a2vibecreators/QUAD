@@ -24,8 +24,10 @@ QUAD Platform uses **16 core database tables** organized into 6 functional categ
 
 | Table | Purpose | Key Features |
 |-------|---------|--------------|
-| `QUAD_companies` | Company/workspace accounts | Multi-tier plans (Free/Pro/Enterprise) |
+| `QUAD_organizations` | Organization/workspace accounts | Multi-tier plans (Free/Pro/Enterprise) |
 | `QUAD_users` | User accounts with OAuth SSO | 6 SSO providers, avatar URLs |
+
+> **Note:** The `company_id` column in database tables maps to `org_id` in Prisma for code clarity.
 
 ### Domain Architecture (NEW - Dec 31, 2025)
 
@@ -239,7 +241,7 @@ Company: Agency Beta (workspace)
 **Step 1: Installation**
 ```sql
 -- Created at installation
-INSERT INTO QUAD_companies (name, admin_email, size) VALUES
+INSERT INTO QUAD_organizations (name, admin_email, size) VALUES
     ('Massachusetts Mutual Life Insurance', 'it-admin@massmutual.com', 'enterprise');
 
 INSERT INTO QUAD_domains (name, display_name, company_id, domain_type) VALUES
@@ -281,7 +283,7 @@ INSERT INTO QUAD_domain_members (domain_id, email, role, allocation_percentage) 
 **Step 1: Signup**
 ```sql
 -- User signs up at quadframe.work
-INSERT INTO QUAD_companies (name, admin_email, size) VALUES
+INSERT INTO QUAD_organizations (name, admin_email, size) VALUES
     ('Startup Alpha', 'founder@startupalpha.com', 'startup');
 
 INSERT INTO QUAD_domains (name, display_name, company_id, domain_type) VALUES

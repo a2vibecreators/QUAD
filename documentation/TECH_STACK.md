@@ -48,8 +48,8 @@ All tables use `QUAD_` prefix to distinguish from NutriNine tables in shared dat
 ### Core Tables
 | Table | Purpose |
 |-------|---------|
-| `QUAD_companies` | Top-level customer organizations |
-| `QUAD_users` | User accounts with roles |
+| `QUAD_organizations` | Top-level customer organizations |
+| `QUAD_users` | User accounts with roles (company_id column maps to org_id in Prisma) |
 | `QUAD_domains` | Hierarchical project/team structure |
 | `QUAD_domain_members` | User membership with allocation % |
 | `QUAD_user_sessions` | Active login sessions |

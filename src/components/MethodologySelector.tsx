@@ -65,7 +65,7 @@ export default function MethodologySelector() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden z-[100]">
           {/* Header */}
           <div className="px-4 py-3 bg-slate-700/50 border-b border-slate-700">
             <div className="text-xs text-slate-400 uppercase tracking-wide">Methodology Lens</div>

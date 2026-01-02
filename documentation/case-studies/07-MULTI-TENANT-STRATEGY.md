@@ -92,7 +92,7 @@
 │                                                                         │
 │  COMPANY LEVEL:                                                         │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  QUAD_companies                                                  │   │
+│  │  QUAD_organizations                                              │   │
 │  │  ├── id                  UUID PRIMARY KEY                        │   │
 │  │  ├── name                TEXT (Acme Corp)                        │   │
 │  │  ├── slug                TEXT UNIQUE (acme-corp)                 │   │
@@ -111,7 +111,7 @@
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │  company_domain_configs                                          │   │
 │  │  ├── id                  UUID PRIMARY KEY                        │   │
-│  │  ├── company_id          UUID REFERENCES QUAD_companies          │   │
+│  │  ├── company_id          UUID REFERENCES QUAD_organizations      │   │
 │  │  ├── domain_id           UUID REFERENCES QUAD_domains            │   │
 │  │  ├── is_primary          BOOLEAN                                 │   │
 │  │  ├── config              JSONB                                   │   │
@@ -390,8 +390,8 @@
 │  DATABASE:                                                              │
 │  □ Create QUAD_domains table with all domain definitions                │
 │  □ Create company_domain_configs junction table                         │
-│  □ Add segment column to QUAD_companies                                 │
-│  □ Add default_domain_id to QUAD_companies                              │
+│  □ Add segment column to QUAD_organizations                             │
+│  □ Add default_domain_id to QUAD_organizations                          │
 │  □ Create row-level security policies                                   │
 │  □ Test data isolation between companies                                │
 │                                                                         │

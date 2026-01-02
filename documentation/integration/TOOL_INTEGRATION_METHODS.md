@@ -681,14 +681,15 @@ GET /oncalls (who's on call)
 **QUAD_ADMIN can configure polling intervals per integration:**
 
 ```sql
--- Example: Company preferences
-UPDATE quad_company_integrations
+-- Example: Organization preferences
+-- Note: company_id column maps to org_id in Prisma
+UPDATE QUAD_org_integrations
 SET config = jsonb_set(
   config,
   '{poll_interval}',
   '"30s"'::jsonb
 )
-WHERE company_id = 'company-uuid' AND integration_id = 'github';
+WHERE company_id = 'org-uuid' AND integration_id = 'github';
 
 -- Supported intervals:
 -- '15s' - Aggressive (expensive, high API usage)
@@ -712,8 +713,9 @@ WHERE company_id = 'company-uuid' AND integration_id = 'github';
 **All API tokens stored in database:**
 ```sql
 -- Example:
-SELECT * FROM quad_company_integrations
-WHERE company_id = 'company-uuid';
+-- Note: company_id column maps to org_id in Prisma
+SELECT * FROM QUAD_org_integrations
+WHERE company_id = 'org-uuid';
 
 -- Result:
 {

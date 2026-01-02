@@ -28,12 +28,12 @@ export async function GET(request: NextRequest) {
     const resourceType = searchParams.get('resource_type');
     const resourceStatus = searchParams.get('resource_status');
 
-    // Get company's domains
-    const companyDomains = await prisma.qUAD_domains.findMany({
-      where: { company_id: payload.companyId },
+    // Get organization's domains
+    const orgDomains = await prisma.qUAD_domains.findMany({
+      where: { org_id: payload.companyId },
       select: { id: true }
     });
-    const domainIds = companyDomains.map(d => d.id);
+    const domainIds = orgDomains.map(d => d.id);
 
     // Build where clause
     const where: Record<string, unknown> = {
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       where: { id: domain_id }
     });
 
-    if (!domain || domain.company_id !== payload.companyId) {
+    if (!domain || domain.org_id !== payload.companyId) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
