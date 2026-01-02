@@ -474,14 +474,44 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
         </div>
       )}
 
-      {/* Scroll to top button */}
-      <button
-        onClick={scrollToTop}
-        className="fixed bottom-6 right-6 z-50 w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm"
-        title="Back to top"
-      >
-        ↑
-      </button>
+      {/* Floating Quick Navigation */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+        {/* Next page button */}
+        {flowInfo?.nextInFlow && (
+          <Link
+            href={flowInfo.nextInFlow.href}
+            className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm ${
+              flowInfo.flow.color === "blue" ? "bg-blue-600 hover:bg-blue-700" :
+              flowInfo.flow.color === "green" ? "bg-green-600 hover:bg-green-700" :
+              "bg-purple-600 hover:bg-purple-700"
+            } text-white`}
+            title={`Next: ${flowInfo.nextInFlow.title}`}
+          >
+            →
+          </Link>
+        )}
+        {!flowInfo?.nextInFlow && nextFlow && (
+          <Link
+            href={nextFlow.pages[0].href}
+            className={`w-10 h-10 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm ${
+              flowColors[nextFlow.color].text === "text-blue-400" ? "bg-blue-600 hover:bg-blue-700" :
+              flowColors[nextFlow.color].text === "text-green-400" ? "bg-green-600 hover:bg-green-700" :
+              "bg-purple-600 hover:bg-purple-700"
+            } text-white`}
+            title={`Continue to ${nextFlow.name}: ${nextFlow.pages[0].title}`}
+          >
+            →
+          </Link>
+        )}
+        {/* Scroll to top button */}
+        <button
+          onClick={scrollToTop}
+          className="w-10 h-10 bg-slate-700 hover:bg-slate-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110 text-sm"
+          title="Back to top"
+        >
+          ↑
+        </button>
+      </div>
 
       {/* Bottom Navigation - Flow-Based */}
       <div className="mt-16 border-t border-slate-700/50 pt-8 pb-16">
@@ -510,25 +540,25 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
             </div>
           )}
 
-          {/* Prev/Next Cards - Flow-Based */}
+          {/* Prev/Next Cards - Compact Flow-Based */}
           {flowInfo && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Previous Button */}
               {flowInfo.prevInFlow ? (
                 <Link
                   href={flowInfo.prevInFlow.href}
-                  className={`flex items-center gap-4 rounded-xl p-5 border transition-all group ${
+                  className={`flex items-center gap-3 rounded-lg p-3 border transition-all group ${
                     flowColors[flowInfo.flow.color].bg
                   } ${flowColors[flowInfo.flow.color].border} hover:bg-slate-800`}
                 >
-                  <span className={`text-3xl ${flowColors[flowInfo.flow.color].text} transition-colors`}>←</span>
+                  <span className={`text-lg ${flowColors[flowInfo.flow.color].text}`}>←</span>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-xs uppercase tracking-wide mb-1 ${flowColors[flowInfo.flow.color].text}`}>
-                      Previous in {flowInfo.flow.name}
+                    <div className={`text-[10px] uppercase tracking-wide ${flowColors[flowInfo.flow.color].text}`}>
+                      Previous
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{flowInfo.prevInFlow.icon}</span>
-                      <span className="font-semibold text-white truncate">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{flowInfo.prevInFlow.icon}</span>
+                      <span className="text-sm font-medium text-white truncate">
                         {flowInfo.prevInFlow.title}
                       </span>
                     </div>
@@ -537,18 +567,18 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
               ) : prevFlow ? (
                 <Link
                   href={prevFlow.pages[prevFlow.pages.length - 1].href}
-                  className={`flex items-center gap-4 rounded-xl p-5 border transition-all group ${
+                  className={`flex items-center gap-3 rounded-lg p-3 border transition-all group ${
                     flowColors[prevFlow.color].bg
                   } ${flowColors[prevFlow.color].border} hover:bg-slate-800`}
                 >
-                  <span className={`text-3xl ${flowColors[prevFlow.color].text} transition-colors`}>←</span>
+                  <span className={`text-lg ${flowColors[prevFlow.color].text}`}>←</span>
                   <div className="flex-1 min-w-0">
-                    <div className={`text-xs uppercase tracking-wide mb-1 ${flowColors[prevFlow.color].text}`}>
+                    <div className={`text-[10px] uppercase tracking-wide ${flowColors[prevFlow.color].text}`}>
                       Back to {prevFlow.name}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{prevFlow.pages[prevFlow.pages.length - 1].icon}</span>
-                      <span className="font-semibold text-white truncate">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">{prevFlow.pages[prevFlow.pages.length - 1].icon}</span>
+                      <span className="text-sm font-medium text-white truncate">
                         {prevFlow.pages[prevFlow.pages.length - 1].title}
                       </span>
                     </div>
@@ -562,53 +592,53 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
               {flowInfo.nextInFlow ? (
                 <Link
                   href={flowInfo.nextInFlow.href}
-                  className={`flex items-center gap-4 rounded-xl p-5 border transition-all group ${
+                  className={`flex items-center gap-3 rounded-lg p-3 border transition-all group ${
                     flowColors[flowInfo.flow.color].activeBg
                   } ${flowColors[flowInfo.flow.color].border} hover:bg-slate-800`}
                 >
                   <div className="flex-1 min-w-0 text-right">
-                    <div className={`text-xs uppercase tracking-wide mb-1 ${flowColors[flowInfo.flow.color].text}`}>
-                      Next in {flowInfo.flow.name}
+                    <div className={`text-[10px] uppercase tracking-wide ${flowColors[flowInfo.flow.color].text}`}>
+                      Next
                     </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="font-semibold text-white truncate">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-sm font-medium text-white truncate">
                         {flowInfo.nextInFlow.title}
                       </span>
-                      <span className="text-lg">{flowInfo.nextInFlow.icon}</span>
+                      <span className="text-sm">{flowInfo.nextInFlow.icon}</span>
                     </div>
                   </div>
-                  <span className={`text-3xl ${flowColors[flowInfo.flow.color].text} transition-colors`}>→</span>
+                  <span className={`text-lg ${flowColors[flowInfo.flow.color].text}`}>→</span>
                 </Link>
               ) : nextFlow ? (
                 <Link
                   href={nextFlow.pages[0].href}
-                  className={`flex items-center gap-4 rounded-xl p-5 border transition-all group ${
+                  className={`flex items-center gap-3 rounded-lg p-3 border transition-all group ${
                     flowColors[nextFlow.color].activeBg
                   } ${flowColors[nextFlow.color].border} hover:bg-slate-800`}
                 >
                   <div className="flex-1 min-w-0 text-right">
-                    <div className={`text-xs uppercase tracking-wide mb-1 ${flowColors[nextFlow.color].text}`}>
+                    <div className={`text-[10px] uppercase tracking-wide ${flowColors[nextFlow.color].text}`}>
                       Continue to {nextFlow.name}
                     </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="font-semibold text-white truncate">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span className="text-sm font-medium text-white truncate">
                         {nextFlow.pages[0].title}
                       </span>
-                      <span className="text-lg">{nextFlow.pages[0].icon}</span>
+                      <span className="text-sm">{nextFlow.pages[0].icon}</span>
                     </div>
                   </div>
-                  <span className={`text-3xl ${flowColors[nextFlow.color].text} transition-colors`}>→</span>
+                  <span className={`text-lg ${flowColors[nextFlow.color].text}`}>→</span>
                 </Link>
               ) : (
                 <Link
                   href="/"
-                  className="flex items-center gap-4 bg-gradient-to-r from-green-600/20 to-green-500/10 hover:from-green-600/30 hover:to-green-500/20 rounded-xl p-5 border border-green-500/30 hover:border-green-400/50 transition-all group sm:col-span-2"
+                  className="flex items-center gap-3 bg-gradient-to-r from-green-600/20 to-green-500/10 hover:from-green-600/30 hover:to-green-500/20 rounded-lg p-3 border border-green-500/30 hover:border-green-400/50 transition-all group sm:col-span-2"
                 >
                   <div className="flex-1 text-center">
-                    <div className="text-xs text-green-400 uppercase tracking-wide mb-1">All Flows Complete!</div>
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-xl">◇</span>
-                      <span className="font-semibold text-white group-hover:text-green-200">
+                    <div className="text-[10px] text-green-400 uppercase tracking-wide">Complete!</div>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-lg">◇</span>
+                      <span className="text-sm font-medium text-white group-hover:text-green-200">
                         Back to QUAD Home
                       </span>
                     </div>
