@@ -248,10 +248,13 @@ export default function DashboardPage() {
               <h2 className="text-xl font-bold text-gray-900">Quick Actions</h2>
             </div>
             <div className="p-6 space-y-3">
-              <button className="w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-                <p className="font-semibold text-blue-900">📊 View Analytics</p>
-                <p className="text-sm text-blue-700">Track your progress</p>
-              </button>
+              <Link
+                href="/reporting"
+                className="block w-full text-left px-4 py-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <p className="font-semibold text-blue-900">📊 View Reports</p>
+                <p className="text-sm text-blue-700">Charts, burndown & velocity</p>
+              </Link>
               <button className="w-full text-left px-4 py-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
                 <p className="font-semibold text-green-900">👥 Invite Team</p>
                 <p className="text-sm text-green-700">Collaborate together</p>

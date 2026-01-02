@@ -10,11 +10,13 @@ QUAD Framework is a full-stack Next.js application with PostgreSQL database.
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **Next.js** | 14.x | React framework with App Router |
-| **React** | 18.x | UI component library |
+| **Next.js** | 15.x | React framework with App Router |
+| **React** | 19.x | UI component library |
 | **TypeScript** | 5.x | Type-safe JavaScript |
 | **Tailwind CSS** | 3.x | Utility-first CSS framework |
-| **Lucide React** | - | Icon library |
+| **Lucide React** | 0.460+ | Icon library |
+| **Recharts** | 2.x | Interactive charts (pie, bar, line) |
+| **NextAuth.js** | 4.x | Authentication library |
 
 ### Key Frontend Patterns
 - **App Router** (Next.js 14) - File-based routing in `src/app/`

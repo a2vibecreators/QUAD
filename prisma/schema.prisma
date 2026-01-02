@@ -3078,3 +3078,315 @@ model QUAD_api_request_logs {
   @@index([created_at])
   @@map("QUAD_api_request_logs")
 }
+
+// ============================================================================
+// PHASE 1: GAMIFICATION & RANKING SYSTEM
+// ============================================================================
+
+// Organization-level ranking configuration
+model QUAD_ranking_configs {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @unique @map("company_id") @db.Uuid
+
+  // Main category weights (must sum to 100)
+  weight_delivery      Int @default(35)
+  weight_quality       Int @default(25)
+  weight_collaboration Int @default(20)
+  weight_learning      Int @default(15)
+  weight_ai_adoption   Int @default(5)
+
+  // Sub-factor weights as JSONB
+  delivery_factors      Json @default("{\"completion_rate\":40,\"story_points\":30,\"on_time\":30}")
+  quality_factors       Json @default("{\"defect_rate\":40,\"rework_rate\":30,\"review_score\":30}")
+  collaboration_factors Json @default("{\"peer_recognition\":40,\"help_given\":30,\"communication\":30}")
+  learning_factors      Json @default("{\"skill_acquisition\":40,\"knowledge_sharing\":30,\"challenge_acceptance\":30}")
+  ai_factors            Json @default("{\"tool_usage\":50,\"efficiency_gain\":50}")
+
+  // Settings
+  calculation_period    String  @default("monthly") @db.VarChar(20) // weekly, bi-weekly, monthly, quarterly
+  show_rankings_to_team Boolean @default(true)
+  anonymize_rankings    Boolean @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  updated_by String?  @db.Uuid
+
+  @@index([org_id])
+  @@map("QUAD_ranking_configs")
+}
+
+// User ranking history
+model QUAD_user_rankings {
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @db.Uuid
+  org_id       String   @map("company_id") @db.Uuid
+  period_start DateTime @db.Date
+  period_end   DateTime @db.Date
+
+  // Category scores (0-100)
+  delivery_score      Decimal? @db.Decimal(5, 2)
+  quality_score       Decimal? @db.Decimal(5, 2)
+  collaboration_score Decimal? @db.Decimal(5, 2)
+  learning_score      Decimal? @db.Decimal(5, 2)
+  ai_adoption_score   Decimal? @db.Decimal(5, 2)
+
+  // Final calculated score
+  final_score Decimal @db.Decimal(5, 2)
+  tier        String  @db.VarChar(2) // S, A+, A, B+, B, C+, C, D, F
+  rank_in_org Int? // Position among all users
+
+  // Raw metrics snapshot (for audit)
+  metrics_snapshot Json?
+
+  created_at DateTime @default(now())
+
+  @@unique([user_id, period_start, period_end])
+  @@index([user_id])
+  @@index([org_id])
+  @@index([period_start, period_end])
+  @@index([tier])
+  @@map("QUAD_user_rankings")
+}
+
+// Peer recognition / Kudos system
+model QUAD_kudos {
+  id           String  @id @default(uuid()) @db.Uuid
+  from_user_id String  @db.Uuid
+  to_user_id   String  @db.Uuid
+  org_id       String  @map("company_id") @db.Uuid
+  domain_id    String? @db.Uuid
+
+  // Kudos details
+  kudos_type String  @db.VarChar(50) // appreciation, help, mentoring, teamwork, innovation
+  message    String?
+  ticket_id  String? @db.Uuid // Optional link to specific work
+
+  created_at DateTime @default(now())
+
+  @@index([from_user_id])
+  @@index([to_user_id])
+  @@index([org_id])
+  @@index([domain_id])
+  @@index([kudos_type])
+  @@index([created_at])
+  @@map("QUAD_kudos")
+}
+
+// Learning & Skills tracking
+model QUAD_user_skills {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+  org_id  String @map("company_id") @db.Uuid
+
+  skill_name         String    @db.VarChar(100)
+  skill_category     String?   @db.VarChar(50) // technical, soft, domain, ai, tool
+  proficiency_level  Int       @default(1) // 1-5 scale
+  certified          Boolean   @default(false)
+  certification_date DateTime? @db.Date
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, skill_name])
+  @@index([user_id])
+  @@index([org_id])
+  @@index([skill_category])
+  @@map("QUAD_user_skills")
+}
+
+// ============================================================================
+// PHASE 1: AI CONFIGURATION
+// ============================================================================
+
+// Organization-level AI provider configuration
+model QUAD_ai_configs {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @unique @map("company_id") @db.Uuid
+
+  // AI Provider selection
+  primary_provider  String  @default("gemini") @db.VarChar(50) // gemini, openai, anthropic, bedrock
+  fallback_provider String? @db.VarChar(50)
+
+  // Usage mode
+  ai_usage_mode String @default("conservative") @db.VarChar(20) // conservative, balanced, full
+
+  // Feature toggles
+  enable_code_generation   Boolean @default(true)
+  enable_code_review       Boolean @default(true)
+  enable_estimation        Boolean @default(true)
+  enable_ticket_generation Boolean @default(true)
+  enable_meeting_summaries Boolean @default(true)
+  enable_rag_chatbot       Boolean @default(true)
+
+  // Human-in-the-loop settings
+  require_approval_code_commit Boolean @default(true)
+  require_approval_deployment  Boolean @default(true)
+  require_approval_db_ops      Boolean @default(true)
+
+  // Cost controls
+  monthly_budget_usd     Decimal? @db.Decimal(10, 2)
+  daily_request_limit    Int?
+  max_tokens_per_request Int?
+
+  // API Keys (encrypted references)
+  openai_key_ref    String? @db.VarChar(255) // Vault reference
+  anthropic_key_ref String? @db.VarChar(255)
+  gemini_key_ref    String? @db.VarChar(255)
+
+  // Usage tracking
+  current_month_spend Decimal   @default(0) @db.Decimal(10, 2)
+  requests_this_month Int       @default(0)
+  last_reset_at       DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@map("QUAD_ai_configs")
+}
+
+// AI Analysis Results Cache (for reuse)
+model QUAD_ai_analysis_cache {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // What was analyzed
+  entity_type   String @db.VarChar(50) // ticket, requirement, code, pr, deployment
+  entity_id     String @db.Uuid
+  analysis_type String @db.VarChar(50) // estimation, risk, complexity, summary, suggestion
+
+  // Input hash (for cache hit detection)
+  input_hash String @db.VarChar(64) // SHA-256 of input content
+
+  // Analysis result
+  result          Json
+  confidence      Decimal? @db.Decimal(3, 2) // 0.00 to 1.00
+  model_used      String   @db.VarChar(50)
+  tokens_consumed Int?
+  latency_ms      Int?
+
+  // Validity
+  expires_at DateTime?
+  is_valid   Boolean   @default(true) // Can be invalidated if entity changes
+
+  created_at DateTime @default(now())
+
+  @@unique([entity_type, entity_id, analysis_type, input_hash])
+  @@index([org_id])
+  @@index([entity_type, entity_id])
+  @@index([analysis_type])
+  @@index([expires_at])
+  @@index([is_valid])
+  @@map("QUAD_ai_analysis_cache")
+}
+
+// ============================================================================
+// PHASE 1: RISK ANALYSIS
+// ============================================================================
+
+// Risk factors tracked per domain/project
+model QUAD_risk_factors {
+  id        String @id @default(uuid()) @db.Uuid
+  domain_id String @db.Uuid
+
+  // Risk identification
+  risk_type   String  @db.VarChar(50) // schedule, scope, technical, resource, external
+  risk_name   String  @db.VarChar(255)
+  description String?
+
+  // Assessment
+  probability Int    @default(3) // 1-5 scale
+  impact      Int    @default(3) // 1-5 scale
+  risk_score  Int    @default(9) // probability * impact
+  risk_level  String @default("medium") @db.VarChar(20) // low, medium, high, critical
+
+  // Status
+  status          String  @default("identified") @db.VarChar(50) // identified, mitigating, resolved, accepted
+  mitigation_plan String?
+
+  // AI analysis
+  ai_identified Boolean @default(false)
+  ai_analysis   Json?
+
+  // Ownership
+  owner_user_id String? @db.Uuid
+
+  // Dates
+  identified_at DateTime  @default(now())
+  resolved_at   DateTime?
+  review_due_at DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([domain_id])
+  @@index([risk_type])
+  @@index([risk_level])
+  @@index([status])
+  @@index([owner_user_id])
+  @@map("QUAD_risk_factors")
+}
+
+// ============================================================================
+// PHASE 1: TRAINING & LEARNING ANALYTICS
+// ============================================================================
+
+// Training content/courses
+model QUAD_training_content {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Content details
+  title        String  @db.VarChar(255)
+  description  String?
+  content_type String  @db.VarChar(50) // video, document, quiz, workshop, external_link
+
+  // Categorization
+  skill_category String?  @db.VarChar(50) // maps to skill categories
+  difficulty     String   @default("beginner") @db.VarChar(20) // beginner, intermediate, advanced
+  duration_mins  Int?
+
+  // Content URL/reference
+  content_url       String?
+  external_provider String? @db.VarChar(50) // udemy, coursera, linkedin_learning, internal
+
+  // Status
+  is_active   Boolean @default(true)
+  is_required Boolean @default(false) // Required for certain roles
+
+  created_by String   @db.Uuid
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([skill_category])
+  @@index([content_type])
+  @@index([is_active])
+  @@map("QUAD_training_content")
+}
+
+// User training completions
+model QUAD_training_completions {
+  id         String @id @default(uuid()) @db.Uuid
+  user_id    String @db.Uuid
+  content_id String @db.Uuid
+
+  // Progress
+  status           String    @default("not_started") @db.VarChar(50) // not_started, in_progress, completed
+  progress_percent Int       @default(0)
+  started_at       DateTime?
+  completed_at     DateTime?
+
+  // Assessment
+  quiz_score      Int?
+  certificate_url String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([user_id, content_id])
+  @@index([user_id])
+  @@index([content_id])
+  @@index([status])
+  @@map("QUAD_training_completions")
+}
