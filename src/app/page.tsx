@@ -499,8 +499,26 @@ export default function Home() {
                   </span>
                 ))}
               </div>
-              <div className="mt-4 text-xs text-blue-400 group-hover:text-blue-300 flex items-center gap-1">
-                Start exploring <span>→</span>
+              <div className="mt-4 flex items-center justify-between">
+                <span className="text-xs text-blue-400 group-hover:text-blue-300 flex items-center gap-1">
+                  Start exploring <span>→</span>
+                </span>
+              </div>
+            </Link>
+            {/* Discovery Assessment - Secondary entry */}
+            <Link
+              href="/discovery"
+              className="group relative rounded-2xl p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border border-cyan-500/20 hover:border-cyan-400/40 transition-all hover:scale-[1.01] md:col-span-2 lg:col-span-1"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                  <span className="text-cyan-400 text-sm">🧭</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-cyan-300">Discovery Assessment</h3>
+                  <p className="text-xs text-slate-500">Find your adoption level</p>
+                </div>
+                <span className="ml-auto text-cyan-400 text-xs">→</span>
               </div>
             </Link>
 
