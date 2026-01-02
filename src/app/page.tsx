@@ -466,114 +466,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Navigation */}
-      <section className="py-16 px-8">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-bold mb-8 text-center">Explore QUAD</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                title: "Source of Truth Flow",
-                desc: "Watch how requirements flow through QUAD - animated SVG visualization",
-                href: "/flow",
-                icon: "🔄",
-              },
-              {
-                title: "Main Concept",
-                desc: "The complete QUAD methodology - Operators, AI Agents, Docs-First approach",
-                href: "/concept",
-                icon: "💡",
-              },
-              {
-                title: "Agent Architecture",
-                desc: "QACA - How agents communicate, permissions, and execution patterns",
-                href: "/architecture",
-                icon: "🏗️",
-              },
-              {
-                title: "Technical Details",
-                desc: "Deep-dive: Agent patterns, flow docs, organizational hierarchy",
-                href: "/details",
-                icon: "📋",
-              },
-              {
-                title: "Terminology",
-                desc: "QUAD jargon glossary - Cycle, Pulse, Trajectory, Checkpoint",
-                href: "/jargons",
-                icon: "📖",
-              },
-              {
-                title: "Executive Summary",
-                desc: "High-level overview for executives and quick reference",
-                href: "/summary",
-                icon: "📝",
-              },
-              {
-                title: "Case Studies",
-                desc: "5 domains: E-commerce, Hospital, Education, Manufacturing, Software",
-                href: "/case-study",
-                icon: "📊",
-                badge: "5 DOMAINS",
-              },
-              {
-                title: "Dashboard Demo",
-                desc: "See how a QUAD implementation dashboard might look",
-                href: "/demo",
-                icon: "🌐",
-              },
-              {
-                title: "QUAD Quiz",
-                desc: "Test your understanding of QUAD methodology concepts",
-                href: "/quiz",
-                icon: "🎯",
-              },
-              {
-                title: "Cheat Sheet",
-                desc: "Searchable quick reference for all QUAD terminology",
-                href: "/cheatsheet",
-                icon: "📄",
-              },
-              {
-                title: "QUAD Platform",
-                desc: "Complete deployable solution - Self-hosted or SaaS with enterprise features",
-                href: "/platform",
-                icon: "🏢",
-                badge: "PRODUCT",
-              },
-              {
-                title: "Adoption Matrix",
-                desc: "Measure your AI journey - 3×3 or 5×5 positioning system with safety buffers",
-                href: "/adoption-matrix",
-                icon: "🎯",
-              },
-              {
-                title: "Documentation",
-                desc: "Complete methodology documentation - from concepts to implementation",
-                href: "/docs",
-                icon: "📚",
-              },
-            ].map((card) => (
-              <Link
-                key={card.href}
-                href={card.href}
-                className="glass-card rounded-xl p-6 hover:bg-white/10 transition-all group relative"
-              >
-                {card.badge && (
-                  <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded-full">
-                    {card.badge}
-                  </span>
-                )}
-                <div className="text-3xl mb-3">{card.icon}</div>
-                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
-                  {card.title}
-                </h3>
-                <p className="text-sm text-slate-400">{card.desc}</p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Choose Your Journey - The 3 Flows */}
       <section className="py-16 px-8">
         <div className="max-w-5xl mx-auto">
@@ -680,6 +572,114 @@ export default function Home() {
             <span className="text-purple-400 font-medium">RESOURCES</span>
             <span className="text-slate-600">→</span>
             <span className="text-emerald-400 font-medium">✓ Complete</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Quick Navigation - All Pages */}
+      <section className="py-16 px-8">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-3xl font-bold mb-8 text-center">Explore QUAD</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                title: "Source of Truth Flow",
+                desc: "Watch how requirements flow through QUAD - animated SVG visualization",
+                href: "/flow",
+                icon: "🔄",
+              },
+              {
+                title: "Main Concept",
+                desc: "The complete QUAD methodology - Operators, AI Agents, Docs-First approach",
+                href: "/concept",
+                icon: "💡",
+              },
+              {
+                title: "Agent Architecture",
+                desc: "QACA - How agents communicate, permissions, and execution patterns",
+                href: "/architecture",
+                icon: "🏗️",
+              },
+              {
+                title: "Technical Details",
+                desc: "Deep-dive: Agent patterns, flow docs, organizational hierarchy",
+                href: "/details",
+                icon: "📋",
+              },
+              {
+                title: "Terminology",
+                desc: "QUAD jargon glossary - Cycle, Pulse, Trajectory, Checkpoint",
+                href: "/jargons",
+                icon: "📖",
+              },
+              {
+                title: "Executive Summary",
+                desc: "High-level overview for executives and quick reference",
+                href: "/summary",
+                icon: "📝",
+              },
+              {
+                title: "Case Studies",
+                desc: "5 domains: E-commerce, Hospital, Education, Manufacturing, Software",
+                href: "/case-study",
+                icon: "📊",
+                badge: "5 DOMAINS",
+              },
+              {
+                title: "Dashboard Demo",
+                desc: "See how a QUAD implementation dashboard might look",
+                href: "/demo",
+                icon: "🌐",
+              },
+              {
+                title: "QUAD Quiz",
+                desc: "Test your understanding of QUAD methodology concepts",
+                href: "/quiz",
+                icon: "🎯",
+              },
+              {
+                title: "Cheat Sheet",
+                desc: "Searchable quick reference for all QUAD terminology",
+                href: "/cheatsheet",
+                icon: "📄",
+              },
+              {
+                title: "QUAD Platform",
+                desc: "Complete deployable solution - Self-hosted or SaaS with enterprise features",
+                href: "/platform",
+                icon: "🏢",
+                badge: "PRODUCT",
+              },
+              {
+                title: "Adoption Matrix",
+                desc: "Measure your AI journey - 3×3 or 5×5 positioning system with safety buffers",
+                href: "/adoption-matrix",
+                icon: "🎯",
+              },
+              {
+                title: "Documentation",
+                desc: "Complete methodology documentation - from concepts to implementation",
+                href: "/docs",
+                icon: "📚",
+              },
+            ].map((card) => (
+              <Link
+                key={card.href}
+                href={card.href}
+                className="glass-card rounded-xl p-6 hover:bg-white/10 transition-all group relative"
+              >
+                {card.badge && (
+                  <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded-full">
+                    {card.badge}
+                  </span>
+                )}
+                <div className="text-3xl mb-3">{card.icon}</div>
+                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">
+                  {card.title}
+                </h3>
+                <p className="text-sm text-slate-400">{card.desc}</p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
