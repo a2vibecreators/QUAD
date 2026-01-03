@@ -1,29 +1,109 @@
 # QUAD Framework - Preview Environments (Sandboxes)
 #
-# Creates an isolated preview environment for each PR.
-# Each developer gets their own sandbox to test changes.
+# Enterprise-ready preview environments with LAYERED architecture.
+# Database changes are handled separately - sandboxes point to shared DEV DB.
 #
-# Features:
-# - Isolated database per PR
-# - Unique URL per PR
-# - Auto-cleanup on PR close
+# Sandbox Types (set via PR label):
+# - ui-only: UI container → Shared DEV API + DB (default for frontend PRs)
+# - api-only: API container → Shared DEV DB (default for backend PRs)
+# - full-stack: UI + API → Shared DEV DB (integration testing)
+# - isolated: UI + API + Own DB (breaking changes, requires approval)
+#
+# Workflow:
+# 1. Database schema changes → Separate PR, reviewed by DBA, merged first
+# 2. API changes → Sandbox points to shared DEV DB
+# 3. UI changes → Sandbox points to shared DEV API
 #
 
 name: Preview Environment
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened, closed, labeled]
 
 env:
   GCP_REGION: us-east1
   BASE_DOMAIN: preview.quadframe.work
+  DEV_DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+  DEV_API_URL: https://dev-api.quadframe.work
 
 jobs:
-  # Deploy preview environment
-  deploy-preview:
-    name: Deploy Preview
+  # Determine sandbox type from PR labels or changed files
+  determine-sandbox-type:
+    name: Determine Sandbox Type
     runs-on: ubuntu-latest
+    if: github.event.action != 'closed'
+    outputs:
+      sandbox_type: ${{ steps.detect.outputs.type }}
+      needs_database: ${{ steps.detect.outputs.needs_database }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect sandbox type
+        id: detect
+        run: |
+          # Check for explicit labels first
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+
+          if [[ "$LABELS" == *"sandbox:isolated"* ]]; then
+            echo "type=isolated" >> $GITHUB_OUTPUT
+            echo "needs_database=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [[ "$LABELS" == *"sandbox:ui-only"* ]]; then
+            echo "type=ui-only" >> $GITHUB_OUTPUT
+            echo "needs_database=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [[ "$LABELS" == *"sandbox:api-only"* ]]; then
+            echo "type=api-only" >> $GITHUB_OUTPUT
+            echo "needs_database=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [[ "$LABELS" == *"sandbox:full-stack"* ]]; then
+            echo "type=full-stack" >> $GITHUB_OUTPUT
+            echo "needs_database=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Auto-detect from changed files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+
+          HAS_UI_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^src/(app|components|pages)/" || true)
+          HAS_API_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^src/app/api/" || true)
+          HAS_SCHEMA_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^prisma/" || true)
+
+          # Schema changes require special handling
+          if [[ -n "$HAS_SCHEMA_CHANGES" ]]; then
+            echo "::warning::This PR contains schema changes. Consider merging schema first."
+            echo "type=full-stack" >> $GITHUB_OUTPUT
+            echo "needs_database=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Detect based on what changed
+          if [[ -n "$HAS_UI_CHANGES" && -z "$HAS_API_CHANGES" ]]; then
+            echo "type=ui-only" >> $GITHUB_OUTPUT
+          elif [[ -z "$HAS_UI_CHANGES" && -n "$HAS_API_CHANGES" ]]; then
+            echo "type=api-only" >> $GITHUB_OUTPUT
+          else
+            echo "type=full-stack" >> $GITHUB_OUTPUT
+          fi
+
+          echo "needs_database=false" >> $GITHUB_OUTPUT
+
+  # Deploy preview environment (shared database by default)
+  deploy-preview:
+    name: Deploy Preview (${{ needs.determine-sandbox-type.outputs.sandbox_type }})
+    runs-on: ubuntu-latest
+    needs: determine-sandbox-type
     if: github.event.action != 'closed'
 
     steps:
@@ -50,8 +130,9 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      # Create preview database
-      - name: Create preview database
+      # Only create isolated database if explicitly requested (rare)
+      - name: Create isolated database (if needed)
+        if: needs.determine-sandbox-type.outputs.needs_database == 'true'
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           DB_NAME="quad_preview_${PR_NUMBER}"
@@ -65,12 +146,41 @@ jobs:
           DATABASE_URL="postgresql://quad_user:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${DB_NAME}" \
             npx prisma db push --skip-generate
 
-      # Build with preview-specific env
+          # Seed with test data from dev
+          DATABASE_URL="postgresql://quad_user:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${DB_NAME}" \
+            npx prisma db seed || echo "No seed script"
+
+      # Set database URL based on sandbox type
+      - name: Set environment variables
+        id: env
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          SANDBOX_TYPE="${{ needs.determine-sandbox-type.outputs.sandbox_type }}"
+
+          if [[ "${{ needs.determine-sandbox-type.outputs.needs_database }}" == "true" ]]; then
+            # Isolated: own database
+            echo "DATABASE_URL=postgresql://quad_user:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/quad_preview_${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "db_type=isolated" >> $GITHUB_OUTPUT
+          else
+            # Shared: point to DEV database
+            echo "DATABASE_URL=${{ env.DEV_DATABASE_URL }}" >> $GITHUB_OUTPUT
+            echo "db_type=shared-dev" >> $GITHUB_OUTPUT
+          fi
+
+          # API URL for UI-only sandboxes
+          if [[ "$SANDBOX_TYPE" == "ui-only" ]]; then
+            echo "API_URL=${{ env.DEV_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "API_URL=" >> $GITHUB_OUTPUT
+          fi
+
+      # Build with appropriate env
       - name: Build application
         run: npm run build
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          DATABASE_URL: "postgresql://quad_user:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/quad_preview_${{ github.event.pull_request.number }}"
+          DATABASE_URL: ${{ steps.env.outputs.DATABASE_URL }}
+          NEXT_PUBLIC_API_URL: ${{ steps.env.outputs.API_URL }}
           NEXTAUTH_URL: "https://pr-${{ github.event.pull_request.number }}.${{ env.BASE_DOMAIN }}"
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
 
@@ -82,6 +192,7 @@ jobs:
         run: |
           docker build \
             -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/quad-preview:pr-${{ github.event.pull_request.number }} \
+            --build-arg SANDBOX_TYPE=${{ needs.determine-sandbox-type.outputs.sandbox_type }} \
             .
 
       - name: Push Docker image
@@ -93,14 +204,15 @@ jobs:
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           SERVICE_NAME="quad-preview-pr-${PR_NUMBER}"
+          SANDBOX_TYPE="${{ needs.determine-sandbox-type.outputs.sandbox_type }}"
 
           gcloud run deploy $SERVICE_NAME \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/quad-preview:pr-${PR_NUMBER} \
             --region ${{ env.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
-            --set-env-vars "NODE_ENV=preview,PR_NUMBER=${PR_NUMBER}" \
-            --set-env-vars "DATABASE_URL=postgresql://quad_user:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/quad_preview_${PR_NUMBER}" \
+            --set-env-vars "NODE_ENV=preview,PR_NUMBER=${PR_NUMBER},SANDBOX_TYPE=${SANDBOX_TYPE}" \
+            --set-env-vars "DATABASE_URL=${{ steps.env.outputs.DATABASE_URL }}" \
             --tag pr-${PR_NUMBER}
 
       - name: Get preview URL
@@ -115,13 +227,15 @@ jobs:
 
           echo "url=$URL" >> $GITHUB_OUTPUT
 
-      # Comment on PR with preview URL
+      # Comment on PR with preview URL and sandbox info
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
             const url = '${{ steps.preview-url.outputs.url }}';
             const prNumber = ${{ github.event.pull_request.number }};
+            const sandboxType = '${{ needs.determine-sandbox-type.outputs.sandbox_type }}';
+            const dbType = '${{ steps.env.outputs.db_type }}';
 
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
@@ -134,18 +248,37 @@ jobs:
               c.user.type === 'Bot' && c.body.includes('Preview Environment')
             );
 
+            const dbInfo = dbType === 'isolated'
+              ? '🔒 Isolated (own database)'
+              : '🔗 Shared DEV database';
+
+            const typeEmoji = {
+              'ui-only': '🎨',
+              'api-only': '⚙️',
+              'full-stack': '📦',
+              'isolated': '🔒'
+            }[sandboxType] || '📦';
+
             const body = `## 🚀 Preview Environment
 
-            | Environment | Link |
-            |-------------|------|
-            | **Preview URL** | ${url} |
-            | **PR** | #${prNumber} |
-            | **Commit** | \`${{ github.sha }}\` |
+| Property | Value |
+|----------|-------|
+| **Preview URL** | ${url} |
+| **Sandbox Type** | ${typeEmoji} \`${sandboxType}\` |
+| **Database** | ${dbInfo} |
+| **PR** | #${prNumber} |
+| **Commit** | \`${{ github.sha }}\` |
 
-            This preview will be automatically deleted when the PR is closed.
+### Sandbox Types
+- 🎨 \`ui-only\`: UI changes only, uses shared DEV API
+- ⚙️ \`api-only\`: API changes only, uses shared DEV database
+- 📦 \`full-stack\`: UI + API, uses shared DEV database
+- 🔒 \`isolated\`: Own database (add \`sandbox:isolated\` label)
 
-            ---
-            <sub>🤖 Generated by QUAD Preview Bot</sub>`;
+> **Note:** Database schema changes should be merged separately before feature PRs.
+
+---
+<sub>🤖 Generated by QUAD Preview Bot</sub>`;
 
             if (botComment) {
               await github.rest.issues.updateComment({
@@ -189,8 +322,24 @@ jobs:
             --quiet \
             || echo "Service may not exist"
 
-      # Delete preview database
-      - name: Delete preview database
+      # Only delete database if it was isolated
+      - name: Check for isolated database
+        id: check-db
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          DB_NAME="quad_preview_${PR_NUMBER}"
+
+          # Check if isolated database exists
+          EXISTS=$(gcloud sql databases list --instance=quad-db --format="value(name)" | grep "^${DB_NAME}$" || true)
+
+          if [[ -n "$EXISTS" ]]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Delete isolated database (if exists)
+        if: steps.check-db.outputs.exists == 'true'
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           DB_NAME="quad_preview_${PR_NUMBER}"
@@ -221,8 +370,8 @@ jobs:
               issue_number: prNumber,
               body: `## 🧹 Preview Environment Cleaned Up
 
-              The preview environment for PR #${prNumber} has been deleted.
+The preview environment for PR #${prNumber} has been deleted.
 
-              ---
-              <sub>🤖 Generated by QUAD Preview Bot</sub>`,
+---
+<sub>🤖 Generated by QUAD Preview Bot</sub>`,
             });
