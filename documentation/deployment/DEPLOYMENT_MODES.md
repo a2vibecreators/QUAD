@@ -5,6 +5,22 @@
 
 ---
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Mode Comparison](#mode-comparison)
+3. [O(1) Seed Mode](#o1-seed-mode)
+4. [O(n) Growth Mode](#on-growth-mode)
+5. [O(n²) Scale Mode](#on-scale-mode)
+6. [Cost Comparison](#cost-comparison)
+7. [Migration Paths](#migration-paths)
+8. [AI Provider Support](#ai-provider-support)
+9. [Security Comparison](#security-comparison)
+10. [Decision Matrix](#decision-matrix)
+11. [Next Steps](#next-steps)
+
+---
+
 ## Overview
 
 QUAD Framework offers three deployment modes using mathematical complexity notation to reflect scaling characteristics:

@@ -5,6 +5,21 @@
 
 ---
 
+## Table of Contents
+
+1. [Testing Objectives](#1-testing-objectives)
+2. [Testing Types](#2-testing-types)
+3. [Test Environments](#3-test-environments)
+4. [Journey Testing Approach](#4-journey-testing-approach)
+5. [Test Data](#5-test-data)
+6. [Bug Severity Levels](#6-bug-severity-levels)
+7. [AI Testing Special Considerations](#7-ai-testing-special-considerations)
+8. [Success Criteria](#8-success-criteria)
+9. [Scope](#9-scope)
+10. [Phase 1 Implementation Status](#10-phase-1-implementation-status)
+
+---
+
 ## 1. Testing Objectives
 
 | Objective | Description |

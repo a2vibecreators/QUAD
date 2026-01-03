@@ -3,6 +3,21 @@
 **Version:** 1.0.0
 **Last Updated:** December 31, 2025
 
+---
+
+## Table of Contents
+
+1. [Supported SSO Providers (Out of the Box)](#supported-sso-providers-out-of-the-box)
+2. [Quick Start (Choose One)](#quick-start-choose-one)
+3. [User Experience](#user-experience)
+4. [Free Tier Enforcement (5 Users)](#free-tier-enforcement-5-users)
+5. [Security Best Practices](#security-best-practices)
+6. [Troubleshooting](#troubleshooting)
+7. [Production Deployment](#production-deployment)
+8. [Support](#support)
+
+---
+
 ## Supported SSO Providers (Out of the Box)
 
 QUAD Platform supports **6 major SSO providers** used by Fortune 500 companies:

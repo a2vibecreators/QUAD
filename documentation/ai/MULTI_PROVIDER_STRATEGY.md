@@ -6,6 +6,23 @@ QUAD uses intelligent task routing across multiple AI providers to minimize cost
 
 ---
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Provider Comparison (January 2026)](#provider-comparison-january-2026)
+3. [Task Routing Strategy](#task-routing-strategy)
+4. [Real-World Example: Meeting → Tickets](#real-world-example-meeting--tickets)
+5. [Implementation Architecture](#implementation-architecture)
+6. [Provider SDKs to Install](#provider-sdks-to-install)
+7. [Environment Variables](#environment-variables)
+8. [Cost Comparison: 1 Month Usage](#cost-comparison-1-month-usage)
+9. [Fallback Strategy](#fallback-strategy)
+10. [Quality Benchmarks](#quality-benchmarks)
+11. [Implementation Phases](#implementation-phases)
+12. [Sources](#sources)
+
+---
+
 ## Provider Comparison (January 2026)
 
 ### Pricing Per Million Tokens

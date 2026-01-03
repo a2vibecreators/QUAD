@@ -6,6 +6,28 @@
 
 ---
 
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Authentication](#authentication)
+3. [Organizations (Companies API)](#organizations-companies-api)
+4. [Users](#users)
+5. [Roles](#roles)
+6. [Domains](#domains)
+7. [Domain Members](#domain-members)
+8. [Resources](#resources)
+9. [Flows](#flows)
+10. [Circles](#circles)
+11. [Circle Members](#circle-members)
+12. [Adoption Matrix](#adoption-matrix)
+13. [Work Sessions](#work-sessions)
+14. [Workload Metrics](#workload-metrics)
+15. [Error Responses](#error-responses)
+16. [Rate Limiting](#rate-limiting)
+17. [Webhooks (Planned)](#webhooks-planned)
+
+---
+
 ## Overview
 
 QUAD Platform provides a RESTful API with 24 endpoints across 12 categories. All endpoints (except auth) require JWT authentication via Bearer token.

@@ -4,6 +4,21 @@
 
 ---
 
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Quick Start (5 Minutes)](#quick-start-5-minutes)
+3. [Project Structure](#project-structure)
+4. [Database Setup (Detailed)](#database-setup-detailed)
+5. [Running the Application](#running-the-application)
+6. [Testing APIs](#testing-apis)
+7. [Common Issues](#common-issues)
+8. [Development Workflow](#development-workflow)
+9. [Next Steps](#next-steps)
+10. [Support](#support)
+
+---
+
 ## Prerequisites
 
 Before you begin, ensure you have:

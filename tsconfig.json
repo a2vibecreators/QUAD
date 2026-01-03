@@ -36,6 +36,12 @@
   ],
   "exclude": [
     "node_modules",
-    "quad-vscode-plugin"
+    "quad-vscode-plugin",
+    "quad-vscode",
+    "quad-android",
+    "quad-ios",
+    "quad-services",
+    "quad-web",
+    "quad-database"
   ]
 }
