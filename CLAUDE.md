@@ -15,8 +15,12 @@ This file provides guidance to Claude Code when working with the QUAD Framework 
 - Deployed on Mac Studio (Docker) + GCP Cloud Run
 
 **Live URLs:**
-- DEV: https://dev.quadframe.work (port 18001)
-- QA: https://qa.quadframe.work (port 18101)
+- DEV Web: https://dev.quadframe.work (port 14001)
+- DEV API: https://dev-api.quadframe.work (port 14101)
+- QA Web: https://qa.quadframe.work (port 15001)
+- QA API: https://qa-api.quadframe.work (port 15101)
+- DEV Database: localhost:14201 (quad_dev_db)
+- QA Database: localhost:15201 (quad_qa_db)
 
 ## QUAD Development Model - Revolutionary Paradigm Shift
 
@@ -327,43 +331,56 @@ src/app/(v1.0)/
 
 ```
 quadframework/
-├── src/
-│   ├── app/                 # Next.js pages
-│   │   ├── page.tsx         # Homepage
-│   │   ├── concept/         # Main concept page
-│   │   ├── details/         # Technical details
-│   │   ├── jargons/         # Terminology
-│   │   ├── demo/            # Dashboard demo
-│   │   ├── quiz/            # Interactive quiz
-│   │   ├── cheatsheet/      # Searchable reference
+├── src/                         # Next.js web app
+│   ├── app/                     # App Router pages
+│   │   ├── page.tsx             # Homepage
+│   │   ├── api/                 # API routes (thin layer, delegates to Java)
+│   │   ├── concept/             # QUAD methodology pages
+│   │   ├── demo/                # Dashboard demo
 │   │   └── ...
-│   ├── components/          # Reusable components
-│   │   ├── PageNavigation.tsx
-│   │   ├── MethodologySelector.tsx
-│   │   ├── MethodologyLens.tsx
-│   │   ├── Tooltip.tsx
-│   │   └── ...
-│   └── context/             # React contexts
-│       └── MethodologyContext.tsx
-├── public/                  # Static assets
-└── CLAUDE.md               # This file
+│   ├── components/              # Reusable components
+│   └── lib/                     # Utilities, Prisma client
+├── prisma/                      # Database schema
+│   └── schema.prisma            # QUAD tables (QUAD_ prefix)
+├── quad-services/          # Java Spring Boot backend (NEW)
+│   ├── src/main/java/com/quad/services/
+│   │   ├── ai/                  # AI providers (Claude, OpenAI, Gemini)
+│   │   ├── memory/              # Context retrieval service
+│   │   ├── assignment/          # Ticket routing
+│   │   └── integrations/        # GitHub, Google Calendar
+│   ├── pom.xml                  # Maven config
+│   └── README.md                # Java service docs
+├── quad-services/               # TypeScript services (LEGACY - kept for reference)
+├── quad-vscode/                 # VS Code extension (submodule)
+├── quad-database/               # Database migrations (submodule)
+├── quad-ios/                    # iOS app (submodule - future)
+├── quad-android/                # Android app (submodule - future)
+├── documentation/               # Markdown docs
+└── CLAUDE.md                    # This file
 ```
+
+**Note:** `quad-services` is the primary backend. The TypeScript `quad-services` package is kept for reference during transition.
 
 ---
 
 ## Database Setup
 
-**QUAD uses a separate database from NutriNine:**
+**QUAD has its own PostgreSQL database, separate from NutriNine:**
 
-| Database | Purpose | Port | Host |
-|----------|---------|------|------|
-| `quad_dev_db` | QUAD Framework development | 16201 | postgres-dev container |
-| `quad_qa_db` | QUAD Framework QA (future) | 17201 | postgres-qa container |
-| `nutrinine_dev_db` | NutriNine app (separate) | 16201 | postgres-dev container |
+| Database | Purpose | Port | Container |
+|----------|---------|------|-----------|
+| `quad_dev_db` | QUAD DEV | 14201 | postgres-quad-dev |
+| `quad_qa_db` | QUAD QA | 15201 | postgres-quad-qa |
+| `nutrinine_dev_db` | NutriNine DEV | 16201 | postgres-dev |
+| `nutrinine_qa_db` | NutriNine QA | 17201 | postgres-qa |
 
 **Connection String (.env):**
-```
-DATABASE_URL="postgresql://nutrinine_user:nutrinine_dev_pass@localhost:16201/quad_dev_db?schema=public"
+```bash
+# DEV
+DATABASE_URL="postgresql://quad_user:quad_dev_pass@localhost:14201/quad_dev_db?schema=public"
+
+# QA
+DATABASE_URL="postgresql://quad_user:quad_qa_pass@localhost:15201/quad_qa_db?schema=public"
 ```
 
 **Prisma Commands:**
@@ -481,21 +498,40 @@ export async function GET() {
 ```
 
 **Container Details:**
-| Environment | Container | Port | URL |
-|-------------|-----------|------|-----|
-| DEV | quadframework-dev | 18001 | https://dev.quadframe.work |
-| QA | quadframework-qa | 18101 | https://qa.quadframe.work |
+| Environment | Service | Container | Port | URL |
+|-------------|---------|-----------|------|-----|
+| DEV | Web | quadframework-dev | 14001 | https://dev.quadframe.work |
+| DEV | Java API | quad-services-dev | 14101 | https://dev-api.quadframe.work |
+| DEV | Database | postgres-quad-dev | 14201 | localhost:14201 |
+| QA | Web | quadframework-qa | 15001 | https://qa.quadframe.work |
+| QA | Java API | quad-services-qa | 15101 | https://qa-api.quadframe.work |
+| QA | Database | postgres-quad-qa | 15201 | localhost:15201 |
 
-**Docker Network:** `nutrinine-network` (shared with Caddy reverse proxy)
+**Port Scheme (A2Vibe Creators Infrastructure):**
+- A2Vibe Website: 11xxx (DEV), 12xxx (QA)
+- QUAD Framework: 14xxx (DEV), 15xxx (QA)
+- NutriNine: 16xxx (DEV), 17xxx (QA)
+
+**Docker Networks:** `dev-network` and `qa-network`
+
+**Complete Infrastructure:** See `/Users/semostudio/scripts/INFRASTRUCTURE_PORTS.md`
 
 **Caddy Configuration:** `/Users/semostudio/docker/caddy/Caddyfile`
 ```
+# QUAD Web
 dev.quadframe.work {
     reverse_proxy quadframework-dev:3000
 }
-
 qa.quadframe.work {
     reverse_proxy quadframework-qa:3000
+}
+
+# QUAD Java API
+dev-api.quadframe.work {
+    reverse_proxy quad-services-dev:14101
+}
+qa-api.quadframe.work {
+    reverse_proxy quad-services-qa:15101
 }
 ```
 

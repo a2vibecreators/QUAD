@@ -1,196 +1,176 @@
 # QUAD Framework - Test Strategy
 
 **Version:** 1.0
-**Last Updated:** January 2, 2026
+**Last Updated:** January 2026
 
 ---
 
-## Table of Contents
+## Test Categories
 
-1. [Testing Objectives](#1-testing-objectives)
-2. [Testing Types](#2-testing-types)
-3. [Test Environments](#3-test-environments)
-4. [Journey Testing Approach](#4-journey-testing-approach)
-5. [Test Data](#5-test-data)
-6. [Bug Severity Levels](#6-bug-severity-levels)
-7. [AI Testing Special Considerations](#7-ai-testing-special-considerations)
-8. [Success Criteria](#8-success-criteria)
-9. [Scope](#9-scope)
-10. [Phase 1 Implementation Status](#10-phase-1-implementation-status)
+| Category | Purpose | Count | Scripts |
+|----------|---------|-------|---------|
+| **Startup** | Verify services are running | 12 checks | `test-startup.sh` |
+| **Feature** | Test individual APIs | ~50 tests | `test-feature-*.sh` |
+| **Journey** | End-to-end user flows | 4 journeys | `test-user-journey-e2e.sh` |
+| **Load** | Performance testing | TBD | Future |
 
 ---
 
-## 1. Testing Objectives
+## Feature Test Coverage
 
-| Objective | Description |
-|-----------|-------------|
-| **Functional Correctness** | All Q-U-A-D workflow stages work as specified |
-| **User Experience** | Smooth navigation through Circle → Domain → Flow workflows |
-| **API Integration** | Next.js app communicates correctly with Prisma backend |
-| **Data Integrity** | Flows, Cycles, and Circles data saved and displayed correctly |
-| **AI Quality** | Flow Accelerators produce accurate, useful outputs |
-| **Human Override** | All AI operations have proper approval gates |
+### Core Tables (15 tables)
 
----
+| Table | API Routes | Test Script | Status |
+|-------|------------|-------------|--------|
+| QUAD_organizations | /api/organizations | test-feature-01.sh | TODO |
+| QUAD_org_members | /api/organizations/[id]/members | test-feature-01.sh | TODO |
+| QUAD_domains | /api/domains | test-feature-02.sh | TODO |
+| QUAD_domain_members | /api/domains/[id]/members | test-feature-02.sh | TODO |
+| QUAD_circles | /api/circles | test-feature-03.sh | TODO |
+| QUAD_circle_members | /api/circles/[id]/members | test-feature-03.sh | TODO |
+| QUAD_users | /api/auth/* | test-feature-04.sh | TODO |
+| QUAD_roles | /api/roles | test-feature-05.sh | TODO |
+| QUAD_core_roles | /api/core-roles | test-feature-05.sh | TODO |
+| QUAD_role_assignments | /api/roles/assign | test-feature-05.sh | TODO |
 
-## 2. Testing Types
+### Work Management (10 tables)
 
-### 2.1 Manual Journey Testing (Primary - Current Phase)
+| Table | API Routes | Test Script | Status |
+|-------|------------|-------------|--------|
+| QUAD_cycles | /api/cycles | test-feature-10.sh | TODO |
+| QUAD_tickets | /api/tickets | test-feature-11.sh | TODO |
+| QUAD_ticket_comments | /api/tickets/[id]/comments | test-feature-11.sh | TODO |
+| QUAD_ticket_time_logs | /api/tickets/[id]/time-logs | test-feature-11.sh | TODO |
+| QUAD_flows | /api/flows | test-feature-12.sh | TODO |
+| QUAD_flow_transitions | /api/flows/[id]/transitions | test-feature-12.sh | TODO |
 
-| Aspect | Details |
-|--------|---------|
-| **What** | End-to-end Q-U-A-D workflow testing |
-| **When** | After each feature implementation |
-| **Who** | Developer/QA |
-| **Documentation** | `journeys/JOURNEY_*.md` files |
+### AI & Memory (8 tables)
 
-### 2.2 Unit Testing (Implemented)
+| Table | API Routes | Test Script | Status |
+|-------|------------|-------------|--------|
+| QUAD_ai_configs | /api/ai-config | test-feature-20.sh | TODO |
+| QUAD_ai_usage | /api/ai/usage | test-feature-20.sh | TODO |
+| QUAD_memory_contexts | /api/memory/context | test-feature-21.sh | TODO |
+| QUAD_memory_documents | /api/memory/documents | test-feature-21.sh | TODO |
+| QUAD_memory_templates | /api/memory/templates | test-feature-21.sh | TODO |
 
-| Aspect | Details |
-|--------|---------|
-| **What** | Test API routes, services, utilities |
-| **Framework** | Jest |
-| **Location** | `__tests__/` or `*.test.ts` |
-| **Coverage Goal** | 70%+ for business logic |
+### Integrations (6 tables)
 
-### 2.3 Integration Testing (Planned)
-
-| Aspect | Details |
-|--------|---------|
-| **What** | Test API endpoint chains |
-| **Framework** | Playwright or Cypress |
-| **Focus** | Critical user flows |
-
----
-
-## 3. Test Environments
-
-| Environment | Database | URL | Use Case |
-|-------------|----------|-----|----------|
-| **Local DEV** | postgres-dev:16201 | localhost:3000 | Development |
-| **DEV Studio** | postgres-dev:16201 | https://dev.quadframe.work | Integration |
-| **QA Studio** | postgres-qa:17201 | https://qa.quadframe.work | Pre-release |
+| Table | API Routes | Test Script | Status |
+|-------|------------|-------------|--------|
+| QUAD_git_integrations | /api/integrations/git | test-feature-30.sh | TODO |
+| QUAD_meeting_integrations | /api/integrations/meeting | test-feature-31.sh | TODO |
+| QUAD_meetings | /api/meetings | test-feature-31.sh | TODO |
+| QUAD_pull_requests | /api/pull-requests | test-feature-32.sh | TODO |
 
 ---
 
-## 4. Journey Testing Approach
+## User Journey Tests
 
-### What is a Journey?
-A **journey** is a complete user workflow from start to finish, tested as a single unit following the **Q-U-A-D** methodology.
+### Journey 1: Onboarding
+```
+Register → Verify Email → Create Organization → Create Domain → Invite Team
+```
 
-### Journey List (Phase 1)
+### Journey 2: Team Setup
+```
+Accept Invite → Create Circle → Assign Roles → Configure AI Tier
+```
 
-| # | Journey | Q-U-A-D Stage | Description | Priority |
-|---|---------|---------------|-------------|----------|
-| J01 | Onboarding & Circle Setup | ALL | New user → Organization → Circle | HIGH |
-| J02 | Q-Stage: Requirements | Q (Question) | Document upload → AI analysis → Flows | HIGH |
-| J03 | U-Stage: Development | U (Understand) | Cycles → Flows → Code → PR | HIGH |
-| J04 | D-Stage: Deployment | D (Deliver) | Recipes → Deploy → Rollback | HIGH |
-| J05 | A-Stage: Database Ops | A (Allocate) | DB Copy → Anonymize → Approve | MEDIUM |
-| J06 | Meetings & Integration | ALL | Otter.ai → Flows → Slack | MEDIUM |
-| J07 | Analytics & Mastery | ALL | Velocity → DORA → Gamification | LOW |
+### Journey 3: Work Cycle
+```
+Create Cycle → Create Tickets → Assign Tickets → Track Progress → Complete Cycle
+```
 
----
-
-## 5. Test Data
-
-### Test User Creation
-Each journey starts with a fresh user:
-- Email: `testuser@quadframe.work`
-- Password: `Test123!`
-- Organization: Auto-created on signup
-
-### Sample Data Required
-Database must have sample data loaded via seed:
-- Core roles (18 master roles)
-- Sample domains
-- Sample flows
-- AI tier configurations
-
-### Seed Command
-```bash
-DATABASE_URL="postgresql://quad_user:quad_dev_pass@localhost:16201/quad_dev_db" npx prisma db seed
+### Journey 4: AI-Assisted Flow
+```
+Create Flow → AI Analyze → Branch Creation → PR Review → Merge
 ```
 
 ---
 
-## 6. Bug Severity Levels
+## How to Find Stuck Processes
 
-| Severity | Description | Example |
-|----------|-------------|---------|
-| **P0 Critical** | App crashes, data loss, security breach | Crash on login, AI reveals PII |
-| **P1 High** | Feature not working | Cannot create Flow from requirement |
-| **P2 Medium** | Works with issues | Wrong AI confidence displayed |
-| **P3 Low** | Minor UI issues | Text alignment off |
+### Local Development
 
----
+```bash
+# Check CPU usage of all services
+ps aux | grep -E "next|java|postgres" | grep -v grep
 
-## 7. AI Testing Special Considerations
+# Find processes using specific ports
+lsof -i :3000   # Next.js
+lsof -i :14101  # Java
+lsof -i :14201  # PostgreSQL
 
-### Confidence Scoring
-| Score Range | Action | Test Verification |
-|-------------|--------|-------------------|
-| 90%+ | Recommended | Show "Recommended" badge |
-| 70-89% | Review Carefully | Show warning indicator |
-| <70% | Manual Review Required | Block auto-approval |
+# Kill stuck process
+kill $(lsof -t -i:3000)
 
-### Human-in-the-Loop
-Every AI action MUST have:
-- [ ] Approval gate before execution
-- [ ] Ability to reject/modify
-- [ ] Full audit trail logged
+# Check what a process is doing
+sample <PID> 5  # macOS: sample process for 5 seconds
+```
 
----
+### GCP Cloud Run
 
-## 8. Success Criteria
+Cloud Run automatically handles stuck containers:
 
-A journey is **test-complete** when:
-- [ ] All steps pass
-- [ ] No P0/P1 bugs
-- [ ] Data persists correctly
-- [ ] Error cases handled
-- [ ] AI operations have human override
-- [ ] Results logged in TEST_RESULTS.md
+1. **Liveness Probe**: Cloud Run checks `/api/_health` every 10s
+2. **Startup Probe**: Allows up to 300s for container to start
+3. **Auto-Restart**: If liveness fails 3x, container is replaced
+4. **Memory Limit**: Container killed if exceeds memory limit
 
----
+**Configuration (in Dockerfile):**
+```yaml
+# Cloud Run will use these automatically
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/api/_health || exit 1
+```
 
-## 9. Scope
+**Monitor in GCP Console:**
+```bash
+# View logs
+gcloud run services logs read quadframework-web --limit=100
 
-### In Scope
-- All Next.js pages (src/app/)
-- All API routes (src/app/api/)
-- Prisma database operations
-- AI Flow Accelerator interactions
-- Circle permissions and roles
+# Check health
+gcloud run services describe quadframework-web --format='value(status.conditions)'
 
-### Out of Scope
-- Third-party API testing (GitHub, Slack, Otter.ai)
-- Performance/load testing
-- Security penetration testing
+# View metrics
+# Console: Cloud Run → quadframework-web → Metrics → CPU, Memory, Request latency
+```
 
 ---
 
-## 10. Phase 1 Implementation Status
+## Test Execution Order
 
-Based on gap analysis (January 2, 2026):
+### Daily (Startup Check)
+```bash
+cd test/scripts
+./test-startup.sh
+```
 
-| Stage | Tables | API | UI | Overall |
-|-------|--------|-----|----|---------|
-| Q-Stage | 85% | 50% | 65% | **50%** |
-| U-Stage | 67% | 45% | 55% | **37%** |
-| D-Stage | 100% | 75% | 0% | **25%** |
-| A-Stage | 100% | 100% | 0% | **33%** |
-| Git Integration | 50% | 0% | 0% | **0%** |
-| Meeting→Flows | 100% | 0% | 0% | **0%** |
-| Slack (Nexus) | 60% | 0% | 0% | **0%** |
-| Gamification | 100% | 67% | 67% | **66%** |
+### After Feature Changes
+```bash
+./test-feature-XX.sh  # Run relevant feature test
+```
 
-**Overall Phase 1: ~35% Complete**
+### Before Deployment
+```bash
+./test-all.sh         # Run all tests
+./test-user-journey-e2e.sh  # Run E2E journeys
+```
+
+---
+
+## Success Criteria
+
+A test passes when:
+- ✅ API returns expected HTTP status codes
+- ✅ Response body matches expected structure
+- ✅ Database state is correct after operations
+- ✅ Error cases return proper error messages
+- ✅ Authentication/authorization works correctly
 
 ---
 
 **See Also:**
-- [TEST_EXECUTION.md](TEST_EXECUTION.md) - How to run tests
-- [TEST_RESULTS.md](TEST_RESULTS.md) - Test status tracking
-- [journeys/](journeys/) - Journey test scenarios
-- [PHASE1_GAP_ANALYSIS.md](../PHASE1_GAP_ANALYSIS.md) - Implementation gaps
+- [test-startup.sh](../scripts/test-startup.sh) - Startup health checks
+- [test-user-journey-e2e.sh](../scripts/test-user-journey-e2e.sh) - E2E user flows
