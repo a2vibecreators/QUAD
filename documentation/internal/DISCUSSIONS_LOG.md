@@ -19,7 +19,9 @@
 8. [Virtual Scrum Master](#8-virtual-scrum-master)
 9. [Voice Assistant & Proactive Calling](#9-voice-assistant--proactive-calling)
 10. [Multilingual Coding Experience](#10-multilingual-coding-experience)
-11. [Future Ideas Backlog](#11-future-ideas-backlog)
+11. [Agent Behavior Rules](#11-agent-behavior-rules)
+12. [Chat Message Queue Management](#12-chat-message-queue-management)
+13. [Future Ideas Backlog](#13-future-ideas-backlog)
 
 ---
 
@@ -635,7 +637,181 @@ Coding doesn't require English anymore. QUAD understands and responds in the dev
 
 ---
 
-## 11. Future Ideas Backlog
+## 11. Agent Behavior Rules
+
+**Date Discussed:** January 3, 2026
+**Status:** Design Complete (See architecture/AGENT_BEHAVIOR_RULES.md)
+
+### Core Concept
+
+Constrain AI agent behavior by injecting "dos and don'ts" rules with each request. Rules are customized per agent type (BA, Dev, QA, Scrum Master) and can be overridden at org/project level.
+
+### User's Vision
+
+> "not only the requirement txt.. we also send agent does and donts for that request.. this do and dont are customized.. for phase 1 these are mostly configuration only.. i want to narrow down Claude thinking not to go out of boundaries"
+
+### Key Points
+
+1. **Per-Agent Rules** - BA can't generate code, Dev can't estimate, QA can't fix bugs
+2. **Configurable** - Orgs can enable/disable/customize rules
+3. **Prompt Injection** - Rules injected into AI system prompt
+4. **Phase 1 = Config** - Mostly configuration, not code generation
+
+### Rule Types
+
+| Type | Symbol | Example |
+|------|--------|---------|
+| **MUST** | ✅ | "MUST ask clarifying questions before finalizing" |
+| **DO** | ✓ | "DO reference existing patterns" |
+| **PREFER** | ⭐ | "PREFER TypeScript over JavaScript" |
+| **AVOID** | ⚠️ | "AVOID over-engineering solutions" |
+| **DONT** | ❌ | "DONT generate code (BA agent)" |
+
+### Design Document
+
+Full design at: `documentation/architecture/AGENT_BEHAVIOR_RULES.md`
+
+---
+
+## 12. Chat Message Queue Management
+
+**Date Discussed:** January 3, 2026
+**Status:** Design Needed
+
+### Core Concept
+
+Allow users to cancel/deactivate messages they sent before they're processed by AI.
+
+### User's Description
+
+> "lets say user typed something which will be queued.. first message do this.. second message dont do this.. third message I changed my mind and do this.. can user delete these second and third from queue.. when the question is already picked up that means its ready for http call.. lets say we add 2 sec sleep time and give a button in the chat to deactivate or soft delete it shows up initially with strike and we will not do http call.. or if its done.. we will ignore that thread"
+
+### Problem Statement
+
+```
+User types rapidly:
+  Message 1: "Create a login form"
+  Message 2: "Wait, don't do that yet"
+  Message 3: "Actually yes, do the login form"
+
+Without queue management:
+  → All 3 messages processed sequentially
+  → Wasted AI calls
+  → Confusing responses
+  → User frustration
+
+With queue management:
+  → User can cancel Message 2 before it's processed
+  → User can delete Message 3 if redundant
+  → Only relevant messages get AI calls
+  → Better UX
+```
+
+### Proposed Design
+
+**Message States:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    MESSAGE LIFECYCLE                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User Types Message                                              │
+│       ↓                                                          │
+│  ┌─────────────────┐                                            │
+│  │   QUEUED        │ ← User can CANCEL here (2 sec window)      │
+│  │   (pending)     │   Shows: [Cancel] button                    │
+│  └────────┬────────┘                                            │
+│           ↓ (after 2 sec delay)                                 │
+│  ┌─────────────────┐                                            │
+│  │   PROCESSING    │ ← HTTP call in progress                    │
+│  │   (spinner)     │   Shows: "Thinking..."                      │
+│  └────────┬────────┘                                            │
+│           ↓                                                      │
+│  ┌─────────────────┐                                            │
+│  │   COMPLETED     │ ← Response received                         │
+│  │   (response)    │                                             │
+│  └─────────────────┘                                            │
+│                                                                  │
+│  CANCELLED State:                                                │
+│  ┌─────────────────┐                                            │
+│  │   CANCELLED     │ ← User clicked Cancel or soft-deleted      │
+│  │   (strikethrough)│   Message shown with ~~strikethrough~~    │
+│  └─────────────────┘                                            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Cancel Options:**
+
+| Timing | Action | Result |
+|--------|--------|--------|
+| Before 2 sec delay | Click [Cancel] | Message struck through, no API call |
+| During processing | Click [Cancel] | Can't cancel, but can ignore response |
+| After response | Click [Ignore Thread] | Response hidden, follow-up ignored |
+
+**UI Elements:**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ CHAT                                                            │
+├────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  You: "Create a login form"                    [QUEUED] [✗]    │
+│       └─── 2 sec countdown before processing                    │
+│                                                                 │
+│  You: "Wait, don't do that yet"               [CANCEL] [✗]     │
+│                                                                 │
+│  You: ~~"Actually yes, do the login form"~~   [CANCELLED]      │
+│       └─── User cancelled this message                          │
+│                                                                 │
+│  QUAD: Thinking... ▋                                            │
+│                                                                 │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Database Schema:**
+
+```sql
+-- Add to QUAD_chat_messages table
+ALTER TABLE QUAD_chat_messages ADD COLUMN
+    status VARCHAR(20) DEFAULT 'queued', -- queued, processing, completed, cancelled
+    cancelled_at TIMESTAMPTZ,
+    cancel_reason VARCHAR(50), -- user_action, superseded, ignored
+    processing_started_at TIMESTAMPTZ;
+```
+
+### Implementation Considerations
+
+1. **2-Second Delay**
+   - Configurable per org (default 2 sec)
+   - Fast typers may want shorter
+   - Shows countdown timer
+
+2. **Abort Controller**
+   - Use AbortController for fetch
+   - Cancel HTTP request if possible
+   - If too late, mark response as "ignore"
+
+3. **Thread Ignoring**
+   - If message cancelled mid-processing, ignore entire thread
+   - Don't show response
+   - Don't include in context for next message
+
+4. **Keyboard Shortcut**
+   - Esc key cancels last queued message
+   - Cmd+Z undoes last cancel
+
+### To Discuss
+
+- [ ] What's the right delay time? (2 sec default?)
+- [ ] Show countdown timer or just [Cancel] button?
+- [ ] Can users edit queued messages instead of cancel?
+- [ ] Batch cancel multiple queued messages?
+- [ ] Cost display for cancelled messages (saved $X)
+
+---
+
+## 13. Future Ideas Backlog
 
 ### Confirmed for Future Phases
 
