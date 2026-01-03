@@ -202,12 +202,25 @@ Result: Best of both worlds
 
 | Provider | Best For | Cost/1M tokens | QUAD Default |
 |----------|----------|---------------|--------------|
-| **Claude Opus 4.5** | Complex reasoning, code | $15 input, $75 output | Quality tier |
-| **Claude Sonnet 4.5** | Code generation, review | $3 input, $15 output | Balanced tier |
+| **Claude Opus 4.5** | Complex reasoning, code | $5 input, $25 output | Quality tier |
+| **Claude Sonnet 4.5** | Code generation, review | $1 input, $3 output | Balanced tier |
+| **Gemini 3 Deep Think** | Extended reasoning | $2 input, $12 output + thinking | Quality tier |
 | **Gemini 3 Pro** | Understanding, docs | Free (1.5K/day) | Turbo tier |
 | **Gemini 3 Flash** | Fast classification | Free (1.5K/day) | All tiers |
 | **Groq (Llama 3.3)** | Extraction, simple | Free | Turbo tier |
 | **DeepSeek V3** | Budget code | $0.14 input | Turbo tier |
+
+### Extended Reasoning Models
+
+For complex problems requiring multi-step thinking:
+
+| Model | Input Cost | Output Cost | Best For |
+|-------|-----------|-------------|----------|
+| **Gemini 3 Deep Think** | $2/1M | $12/1M + thinking tokens | Architecture, Complex bugs |
+| **Claude Opus 4.5** | $5/1M | $25/1M | Safety-critical, Legal |
+| **OpenAI o1** | $15/1M | $60/1M | Math, Science reasoning |
+
+**QUAD Strategy:** Use Gemini 3 Deep Think first (2.5x cheaper), fallback to Claude Opus for edge cases.
 
 ### Cost Comparison (10 developers, 1 month)
 
