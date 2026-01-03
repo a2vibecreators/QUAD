@@ -94,6 +94,15 @@ model QUAD_organizations {
   tier_id     String?  @db.Uuid // Link to QUAD_org_tiers (only for root orgs)
   path        String?  // Materialized path for hierarchy: /parent/child/grandchild
   is_active   Boolean  @default(true)
+
+  // Portal organization support
+  org_type    String   @default("CUSTOMER") @db.VarChar(20)
+  // CUSTOMER = normal customer org
+  // PORTAL = system portal org (platform admin access)
+  // TEST = internal testing org
+  // DEMO = demo/showcase org
+  is_visible  Boolean  @default(true) // false hides from org listings (PORTAL, TEST)
+
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
 
@@ -115,6 +124,7 @@ model QUAD_organizations {
   git_integrations     QUAD_git_integrations[]    // Git providers (GitHub, GitLab, etc.)
   git_repositories     QUAD_git_repositories[]    // Connected repositories
   codebase_indexes     QUAD_codebase_indexes[]    // AI token-optimized codebase summaries
+  skills               QUAD_skills[]              // Tech stack skills defined for this org
 
   @@index([tier_id])
   @@index([slug])
@@ -324,6 +334,80 @@ model QUAD_org_invitations {
 }
 
 // =============================================================================
+// PORTAL ACCESS - Platform admin access for portal org members
+// =============================================================================
+model QUAD_portal_access {
+  id          String   @id @default(uuid()) @db.Uuid
+  user_id     String   @unique @db.Uuid
+
+  // Portal role (determines access level)
+  portal_role String   @db.VarChar(50)
+  // PORTAL_OWNER - Full platform admin (billing, all orgs, AI pool)
+  // PORTAL_ADMIN - Platform reports, user management
+  // PORTAL_TESTER - Test domains only, no billing access
+  // PORTAL_SUPPORT - Read-only access to customer orgs (with audit)
+
+  // Granular permissions
+  can_view_all_orgs    Boolean @default(false) // See all organizations
+  can_impersonate      Boolean @default(false) // Act as another user (with audit)
+  can_manage_billing   Boolean @default(false) // Access billing/revenue
+  can_manage_ai_pool   Boolean @default(false) // Manage platform credit pool
+  can_access_test_orgs Boolean @default(true)  // Access test organizations
+
+  // Grant info
+  granted_by  String?   @db.Uuid
+  granted_at  DateTime  @default(now())
+  expires_at  DateTime?
+
+  is_active   Boolean   @default(true)
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+
+  // Relations
+  user        QUAD_users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  granter     QUAD_users? @relation("PortalGranter", fields: [granted_by], references: [id], onDelete: SetNull)
+
+  @@index([portal_role])
+  @@index([is_active])
+  @@map("QUAD_portal_access")
+}
+
+// Portal Audit Log - tracks all portal admin actions
+model QUAD_portal_audit_log {
+  id              String   @id @default(uuid()) @db.Uuid
+
+  // Who did the action
+  portal_user_id  String   @db.Uuid
+
+  // What was done
+  action_type     String   @db.VarChar(50)
+  // view_org, view_user, impersonate_start, impersonate_end,
+  // view_billing, edit_billing, view_ai_pool, manage_ai_pool,
+  // access_test_org, export_data
+
+  // What was affected (optional)
+  target_org_id   String?  @db.Uuid
+  target_user_id  String?  @db.Uuid
+
+  // Details
+  action_details  Json?    // { "reason": "support ticket #123", "duration_ms": 5400000 }
+  ip_address      String?  @db.VarChar(45)
+  user_agent      String?
+
+  created_at      DateTime @default(now())
+
+  // Relations
+  portal_user     QUAD_users @relation("PortalAuditActor", fields: [portal_user_id], references: [id], onDelete: Cascade)
+
+  @@index([portal_user_id])
+  @@index([target_org_id])
+  @@index([target_user_id])
+  @@index([action_type])
+  @@index([created_at])
+  @@map("QUAD_portal_audit_log")
+}
+
+// =============================================================================
 // CORE ROLES - Master list of role templates (system-wide)
 // Users can select from this list or create custom roles linked to a core role
 // =============================================================================
@@ -479,6 +563,14 @@ model QUAD_users {
 
   // Relations - Release notes
   release_contributions  QUAD_release_contributors[] @relation("ReleaseContributor")
+
+  // Relations - Portal access
+  portal_access          QUAD_portal_access?         // User's portal admin access
+  portal_grants_given    QUAD_portal_access[]        @relation("PortalGranter") // Portal access this user granted
+  portal_audit_logs      QUAD_portal_audit_log[]     @relation("PortalAuditActor") // Portal actions this user took
+
+  // Relations - Skills
+  user_skills            QUAD_user_skills[]          // User's tech stack proficiency
 
   @@index([org_id])
   @@index([email])
@@ -651,11 +743,62 @@ model QUAD_resource_attributes {
 model QUAD_adoption_matrix {
   id                   String    @id @default(uuid()) @db.Uuid
   user_id              String    @unique @db.Uuid
+
+  // ========================================================================
+  // SKILL × TRUST MATRIX (Original)
+  // ========================================================================
   skill_level          Int       @default(1) // 1-3: Beginner, Intermediate, Expert
   trust_level          Int       @default(1) // 1-3: Low, Medium, High
   previous_skill_level Int?
   previous_trust_level Int?
   level_changed_at     DateTime?
+
+  // ========================================================================
+  // MULTI-AGENT PREFERENCES (New)
+  // ========================================================================
+  // Which AI agents does the user prefer/enable?
+  agent_developer_enabled     Boolean @default(true)  // Code generation agent
+  agent_reviewer_enabled      Boolean @default(true)  // Code review agent
+  agent_tester_enabled        Boolean @default(false) // Test generation agent
+  agent_docs_enabled          Boolean @default(true)  // Documentation agent
+  agent_devops_enabled        Boolean @default(false) // Deployment agent
+  agent_scrum_master_enabled  Boolean @default(false) // Virtual Scrum Master
+
+  // Agent autonomy level: 'supervised', 'semi_autonomous', 'autonomous'
+  agent_autonomy_level        String  @default("supervised") @db.VarChar(20)
+
+  // Preferred agent for different tasks (JSON for flexibility)
+  // { "code_gen": "developer", "review": "reviewer", "docs": "docs" }
+  agent_task_preferences      Json?
+
+  // ========================================================================
+  // AI PLATFORM PREFERENCES (New)
+  // ========================================================================
+  // Preferred AI provider for different task types
+  ai_provider_code            String  @default("claude") @db.VarChar(20) // claude, gemini, deepseek
+  ai_provider_review          String  @default("claude") @db.VarChar(20)
+  ai_provider_docs            String  @default("gemini") @db.VarChar(20)
+  ai_provider_chat            String  @default("gemini") @db.VarChar(20)
+  ai_provider_extraction      String  @default("groq") @db.VarChar(20)
+
+  // Cost/Quality preference: 'turbo', 'balanced', 'quality'
+  ai_tier_preference          String  @default("balanced") @db.VarChar(20)
+
+  // Response language preference
+  ai_response_language        String  @default("english") @db.VarChar(20)
+
+  // ========================================================================
+  // PLATFORM PREFERENCES (New)
+  // ========================================================================
+  // External platform preferences (for complementary use)
+  uses_antigravity            Boolean @default(false) // Uses Google Antigravity
+  uses_cursor                 Boolean @default(false) // Uses Cursor
+  uses_copilot                Boolean @default(false) // Uses GitHub Copilot
+  preferred_ide               String  @default("vscode") @db.VarChar(20) // vscode, antigravity, cursor, jetbrains
+
+  // ========================================================================
+  // METADATA
+  // ========================================================================
   notes                String?
   created_at           DateTime  @default(now())
   updated_at           DateTime  @updatedAt
@@ -664,6 +807,8 @@ model QUAD_adoption_matrix {
   user QUAD_users @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([ai_tier_preference])
+  @@index([agent_autonomy_level])
   @@map("QUAD_adoption_matrix")
 }
 
@@ -1019,6 +1164,7 @@ model QUAD_tickets {
   pull_request       QUAD_pull_requests?     @relation(fields: [pull_request_id], references: [id], onDelete: SetNull)
   source_requirement QUAD_requirements?      @relation(fields: [source_requirement_id], references: [id], onDelete: SetNull)
   source_milestone   QUAD_milestones?        @relation(fields: [source_milestone_id], references: [id], onDelete: SetNull)
+  required_skills    QUAD_ticket_skills[]    // Skills needed for this ticket
 
   @@unique([domain_id, ticket_number])
   @@index([domain_id])
@@ -1622,6 +1768,18 @@ model QUAD_meetings {
   ai_processed Boolean @default(false)
   ai_summary   String?
 
+  // MOM (Minutes of Meeting) - BA Review Workflow
+  mom_status              String    @default("pending") @db.VarChar(50) // pending, ai_extracted, needs_review, confirmed, rejected
+  mom_confirmed_by        String?   @db.Uuid  // BA who confirmed the MOM
+  mom_confirmed_at        DateTime?
+  mom_has_uncertain_items Boolean   @default(false) // true if any action items have uncertainty
+  mom_notes               String?   // BA's notes on the MOM
+
+  // Follow-up Status
+  followups_proposed      Boolean   @default(false) // AI proposed follow-up tickets
+  followups_approved_by   String?   @db.Uuid
+  followups_approved_at   DateTime?
+
   // Status
   status String @default("scheduled") @db.VarChar(50) // scheduled, in_progress, completed, cancelled
 
@@ -1632,10 +1790,12 @@ model QUAD_meetings {
   // Relations
   domain       QUAD_domains                @relation(fields: [domain_id], references: [id], onDelete: Cascade)
   action_items QUAD_meeting_action_items[]
+  follow_ups   QUAD_meeting_follow_ups[]
 
   @@index([domain_id])
   @@index([meeting_type])
   @@index([status])
+  @@index([mom_status])
   @@index([scheduled_at])
   @@map("QUAD_meetings")
 }
@@ -1645,7 +1805,17 @@ model QUAD_meeting_action_items {
   meeting_id String @db.Uuid
 
   // Content
-  description String
+  description       String
+  original_text     String?  // Raw text from transcript before AI cleaning
+  speaker_name      String?  @db.VarChar(100) // Who said this in the meeting
+  timestamp_seconds Int?     // When in the meeting this was said
+
+  // Uncertainty tracking - AI adds "?" when not confident
+  is_uncertain      Boolean  @default(false) // true = AI couldn't understand clearly
+  uncertainty_reason String?  @db.VarChar(255) // bad_audio, unclear_speech, incomplete, ambiguous
+  ba_reviewed       Boolean  @default(false) // BA has reviewed this item
+  ba_confirmed      Boolean  @default(false) // BA confirmed this is correct
+  ba_edited_text    String?  // If BA edited the description
 
   // Assignment
   assigned_to String?   @db.Uuid
@@ -1657,6 +1827,9 @@ model QUAD_meeting_action_items {
   // Status
   status String @default("pending") @db.VarChar(50) // pending, in_progress, completed, cancelled
 
+  // Item type
+  item_type String @default("action") @db.VarChar(50) // action, decision, note, question, risk
+
   // AI
   ai_extracted  Boolean  @default(false) // True if AI extracted from transcript
   ai_confidence Decimal? @db.Decimal(3, 2)
@@ -1665,12 +1838,60 @@ model QUAD_meeting_action_items {
   updated_at DateTime @updatedAt
 
   // Relations
-  meeting QUAD_meetings @relation(fields: [meeting_id], references: [id], onDelete: Cascade)
+  meeting    QUAD_meetings             @relation(fields: [meeting_id], references: [id], onDelete: Cascade)
+  follow_ups QUAD_meeting_follow_ups[]
 
   @@index([meeting_id])
   @@index([assigned_to])
   @@index([status])
+  @@index([is_uncertain])
+  @@index([ba_reviewed])
   @@map("QUAD_meeting_action_items")
+}
+
+// AI-proposed follow-up tasks from meeting action items
+model QUAD_meeting_follow_ups {
+  id              String @id @default(uuid()) @db.Uuid
+  meeting_id      String @db.Uuid
+  action_item_id  String? @db.Uuid // Which action item this follows up on
+
+  // Proposed ticket details
+  proposed_title       String @db.VarChar(500)
+  proposed_description String?
+  proposed_type        String @default("task") @db.VarChar(50) // task, bug, story, spike
+  proposed_priority    String @default("medium") @db.VarChar(20) // critical, high, medium, low
+  proposed_story_points Int?
+
+  // AI assignment suggestion
+  proposed_assignee_id   String? @db.Uuid
+  assignment_reason      String? // "Has Docker skill (4/5), low workload, high interest"
+  alternative_assignees  Json?   // Array of {user_id, score, reason}
+
+  // Status
+  status           String    @default("proposed") @db.VarChar(50) // proposed, approved, rejected, ticket_created
+  ba_decision      String?   @db.VarChar(50) // approve, reject, modify, defer
+  ba_decision_by   String?   @db.Uuid
+  ba_decision_at   DateTime?
+  ba_notes         String?
+
+  // If approved and ticket created
+  created_ticket_id String? @db.Uuid
+
+  // AI confidence in this proposal
+  ai_confidence Decimal @default(0.8) @db.Decimal(3, 2)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  meeting     QUAD_meetings              @relation(fields: [meeting_id], references: [id], onDelete: Cascade)
+  action_item QUAD_meeting_action_items? @relation(fields: [action_item_id], references: [id], onDelete: SetNull)
+
+  @@index([meeting_id])
+  @@index([action_item_id])
+  @@index([status])
+  @@index([proposed_assignee_id])
+  @@map("QUAD_meeting_follow_ups")
 }
 
 // ============================================================================
@@ -3474,25 +3695,67 @@ model QUAD_kudos {
   @@map("QUAD_kudos")
 }
 
-// Learning & Skills tracking
+// Learning & Skills tracking - Enhanced for intelligent ticket assignment
 model QUAD_user_skills {
-  id      String @id @default(uuid()) @db.Uuid
-  user_id String @db.Uuid
-  org_id  String @map("company_id") @db.Uuid
+  id       String  @id @default(uuid()) @db.Uuid
+  user_id  String  @db.Uuid
+  org_id   String  @map("company_id") @db.Uuid
+  skill_id String? @db.Uuid // Optional link to master QUAD_skills table
 
   skill_name         String    @db.VarChar(100)
   skill_category     String?   @db.VarChar(50) // technical, soft, domain, ai, tool
-  proficiency_level  Int       @default(1) // 1-5 scale
+
+  // Proficiency level (1-5)
+  // 1 = Beginner (knows concept, needs guidance)
+  // 2 = Junior (can do simple tasks independently)
+  // 3 = Intermediate (can handle most tasks)
+  // 4 = Senior (can handle complex tasks, mentor others)
+  // 5 = Expert (go-to person, can architect solutions)
+  proficiency_level  Int       @default(2) // 1-5 scale
+
+  // How this was determined
+  source            String    @default("self_declared") @db.VarChar(50) // self_declared, ai_inferred, peer_feedback, ticket_history, scrum_feedback
+
+  // AI's confidence in this assessment (0.0 - 1.0)
+  confidence        Decimal   @default(0.5) @db.Decimal(3, 2)
+
+  // Evidence tracking - for AI to learn from
+  tickets_completed Int       @default(0) // How many tickets with this skill they completed
+  tickets_declined  Int       @default(0) // How many they declined due to lack of skill
+  positive_feedback Int       @default(0) // Times they got positive feedback
+  negative_feedback Int       @default(0) // Times they struggled
+
+  // Notes from scrum or peer feedback
+  notes             String?
+
+  // Interest level - what user WANTS to learn (separate from proficiency)
+  // high = actively seeking tickets in this area, wants to grow
+  // medium = open to tasks, will accept
+  // low = prefers other areas, assign only if needed
+  // none = not interested, avoid assigning
+  interest_level    String    @default("medium") @db.VarChar(20) // high, medium, low, none
+  wants_to_learn    Boolean   @default(false) // true = novice but eager, prioritize for learning opportunities
+
+  // Certification
   certified          Boolean   @default(false)
   certification_date DateTime? @db.Date
 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  // Last time this was assessed/updated
+  last_assessed DateTime @default(now())
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  user  QUAD_users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  skill QUAD_skills? @relation(fields: [skill_id], references: [id], onDelete: SetNull)
 
   @@unique([user_id, skill_name])
   @@index([user_id])
   @@index([org_id])
+  @@index([skill_id])
   @@index([skill_category])
+  @@index([proficiency_level])
+  @@index([interest_level])
   @@map("QUAD_user_skills")
 }
 
@@ -3511,6 +3774,12 @@ model QUAD_ai_configs {
 
   // Usage mode
   ai_usage_mode String @default("conservative") @db.VarChar(20) // conservative, balanced, full
+
+  // Task Classification Mode (for AI model routing)
+  classification_mode String @default("hybrid") @db.VarChar(20) // accuracy, cost, hybrid
+  // - accuracy: Always ask Gemini to classify (95% accurate, +1 API call)
+  // - cost: Keywords only, no API calls (80% accurate, instant)
+  // - hybrid: Smart mix (93% accurate, ~0.3 calls avg)
 
   // Feature toggles
   enable_code_generation   Boolean @default(true)
@@ -4092,4 +4361,723 @@ model QUAD_platform_pool_transactions {
   @@index([org_id])
   @@index([created_at])
   @@map("QUAD_platform_pool_transactions")
+}
+
+// ============================================================================
+// USER SKILLS & INTELLIGENT ASSIGNMENT
+// ============================================================================
+// Track tech stack proficiency per developer for smart ticket assignment
+// Learn from scrum calls and ticket completion
+
+// Master list of skills/technologies
+model QUAD_skills {
+  id            String   @id @default(uuid()) @db.Uuid
+  org_id        String   @db.Uuid
+
+  skill_name    String   @db.VarChar(100) // React, PostgreSQL, Docker, etc.
+  skill_code    String   @db.VarChar(50)  // react, postgresql, docker (lowercase, no spaces)
+  category      String   @db.VarChar(50)  // frontend, backend, database, devops, mobile, testing, design
+  description   String?  @db.VarChar(500)
+
+  // For AI to understand the skill
+  ai_context    String?  // "React is a JavaScript library for building user interfaces"
+  related_skills String[] // ["javascript", "typescript", "next_js"]
+
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  organization  QUAD_organizations @relation(fields: [org_id], references: [id], onDelete: Cascade)
+  user_skills   QUAD_user_skills[]
+  ticket_skills QUAD_ticket_skills[]
+
+  @@unique([org_id, skill_code])
+  @@index([org_id])
+  @@index([category])
+  @@map("QUAD_skills")
+}
+
+// Feedback events that update skill assessments
+// Track learning moments from scrum calls, ticket completion, peer reviews
+model QUAD_skill_feedback {
+  id              String   @id @default(uuid()) @db.Uuid
+  user_id         String   @db.Uuid
+  skill_id        String?  @db.Uuid // May be null if skill needs to be created
+  skill_name      String?  @db.VarChar(100) // For when skill_id is null
+
+  // What triggered this feedback
+  feedback_type   String   @db.VarChar(50)
+  // Types:
+  // - ticket_completed: Successfully completed a ticket with this skill
+  // - ticket_declined: User said "I don't know this" in scrum
+  // - ticket_reassigned: Ticket was reassigned due to skill mismatch
+  // - peer_feedback: Another team member gave feedback
+  // - self_assessment: User updated their own skill
+  // - ai_observed: AI noticed pattern from ticket history
+
+  // Impact on proficiency (-2 to +2)
+  // -2 = Major weakness discovered
+  // -1 = Minor struggle
+  //  0 = Neutral observation
+  // +1 = Minor success
+  // +2 = Major competency demonstrated
+  proficiency_delta Int @default(0)
+
+  // Context
+  ticket_id       String?  @db.Uuid
+  scrum_session_id String? @db.Uuid // If from a scrum call
+  given_by_user_id String? @db.Uuid // If peer feedback
+
+  // What was said/observed
+  feedback_notes  String?
+
+  // Was this processed into user_skills?
+  is_processed    Boolean  @default(false)
+  processed_at    DateTime?
+
+  created_at      DateTime @default(now())
+
+  @@index([user_id])
+  @@index([skill_id])
+  @@index([ticket_id])
+  @@index([feedback_type])
+  @@index([is_processed])
+  @@map("QUAD_skill_feedback")
+}
+
+// Skills required for a ticket (for intelligent assignment)
+model QUAD_ticket_skills {
+  id            String   @id @default(uuid()) @db.Uuid
+  ticket_id     String   @db.Uuid
+  skill_id      String   @db.Uuid
+
+  // How important is this skill for this ticket
+  importance    String   @default("required") @db.VarChar(20) // required, preferred, nice_to_have
+
+  // Minimum proficiency needed (1-5)
+  min_proficiency Int @default(2)
+
+  // Was this AI-inferred or manually set?
+  source        String   @default("ai_inferred") @db.VarChar(50) // ai_inferred, manual
+
+  // AI confidence if inferred
+  confidence    Decimal? @db.Decimal(3, 2)
+
+  created_at    DateTime @default(now())
+
+  // Relations
+  ticket QUAD_tickets @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  skill  QUAD_skills  @relation(fields: [skill_id], references: [id], onDelete: Cascade)
+
+  @@unique([ticket_id, skill_id])
+  @@index([ticket_id])
+  @@index([skill_id])
+  @@map("QUAD_ticket_skills")
+}
+
+// Assignment scoring - how we decided who to assign
+model QUAD_assignment_scores {
+  id              String   @id @default(uuid()) @db.Uuid
+  ticket_id       String   @db.Uuid
+
+  // All candidates considered
+  candidates      Json     // [{ user_id, skill_score, workload_score, total_score, reasons[] }]
+
+  // Final assignment
+  assigned_to     String   @db.Uuid
+  assignment_type String   @db.VarChar(50) // auto_assigned, manual_override, reassigned
+
+  // Why this person was chosen
+  assignment_reason String? @db.VarChar(500) // "Highest skill match (4/5 React, 3/5 TypeScript)"
+
+  // If manual override, who did it and why
+  overridden_by   String?  @db.Uuid
+  override_reason String?  @db.VarChar(500)
+
+  created_at      DateTime @default(now())
+
+  @@index([ticket_id])
+  @@index([assigned_to])
+  @@map("QUAD_assignment_scores")
+}
+
+// ============================================================================
+// QUAD MEMORY MANAGEMENT SYSTEM
+// Hierarchical context management for token-efficient AI interactions
+// ============================================================================
+
+// Main memory document storage - like claude.md but hierarchical
+// Each level (org/domain/project) has its own memory document
+model QUAD_memory_documents {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Hierarchy level
+  memory_level    String  @db.VarChar(20) // org, domain, project, circle, user
+  level_entity_id String? @db.Uuid        // domain_id, project_id, circle_id, or user_id
+
+  // Document identification
+  document_key String @db.VarChar(100) // e.g., "QUAD_ORG_abc123.md", "QUAD_DOMAIN_xyz789.md"
+  title        String @db.VarChar(200) // "TechCorp Organization Memory"
+
+  // Content - the actual memory (markdown format)
+  content      String   // Full markdown content (can be large - CLOB)
+  content_hash String?  @db.VarChar(64) // SHA256 hash for change detection
+
+  // Metadata for quick filtering
+  version         Int      @default(1)
+  last_updated_by String?  @db.Uuid
+  word_count      Int      @default(0)
+  token_estimate  Int      @default(0) // Approximate token count for context planning
+
+  // Sections within the document (JSON for quick section access)
+  // [{ id: "tech_stack", title: "Tech Stack", line_start: 10, line_end: 45, keywords: ["react", "typescript"] }]
+  sections Json?
+
+  // Auto-update settings
+  auto_update_enabled  Boolean @default(true)
+  auto_update_sources  String[] // ["tickets", "meetings", "commits", "decisions"]
+  last_auto_update_at  DateTime?
+
+  // Active/Archive
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  chunks QUAD_memory_chunks[]
+
+  @@unique([org_id, memory_level, level_entity_id])
+  @@index([org_id])
+  @@index([memory_level])
+  @@index([document_key])
+  @@index([is_active])
+  @@map("QUAD_memory_documents")
+}
+
+// Memory chunks - searchable portions of memory documents
+// Each chunk is ~500-1000 tokens, optimized for retrieval
+model QUAD_memory_chunks {
+  id          String @id @default(uuid()) @db.Uuid
+  document_id String @db.Uuid
+
+  // Chunk identification
+  chunk_index  Int     // Order within document (0, 1, 2, ...)
+  section_id   String? @db.VarChar(100) // Which section this belongs to
+  section_path String? @db.VarChar(500) // "Tech Stack > Frontend > React"
+
+  // Content
+  content        String  // The actual chunk text
+  content_hash   String? @db.VarChar(64)
+  token_count    Int     @default(0)
+
+  // Retrieval optimization
+  keywords       String[] // Extracted keywords for fast matching
+  importance     Int      @default(5) // 1-10, higher = more important to include
+
+  // Embedding for semantic search (Phase 2 RAG)
+  embedding      Json?    // Vector for similarity search
+  embedding_model String? @db.VarChar(50) // "text-embedding-3-small"
+
+  // Usage tracking (for learning what's useful)
+  times_retrieved  Int @default(0)
+  times_helpful    Int @default(0) // When AI didn't request more after this chunk
+  times_insufficient Int @default(0) // When AI requested more after this chunk
+  helpfulness_score Decimal? @db.Decimal(3, 2) // Calculated: helpful / retrieved
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  // Relations
+  document QUAD_memory_documents @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@index([document_id])
+  @@index([section_id])
+  @@index([importance])
+  @@index([helpfulness_score])
+  @@map("QUAD_memory_chunks")
+}
+
+// Context sessions - track each AI interaction and what context was sent
+model QUAD_context_sessions {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Session identification
+  user_id    String  @db.Uuid
+  session_type String @db.VarChar(50) // ticket_analysis, code_review, meeting_summary, chat
+
+  // What triggered this session
+  trigger_entity_type String? @db.VarChar(50) // ticket, pr, meeting, general
+  trigger_entity_id   String? @db.Uuid
+
+  // Context sent in this session
+  // { initial: [chunk_ids], iterations: [{ request: "...", chunks_sent: [...] }] }
+  context_sent Json
+
+  // Token accounting
+  initial_context_tokens Int @default(0)
+  total_context_tokens   Int @default(0)
+  total_response_tokens  Int @default(0)
+
+  // Iteration tracking
+  iteration_count Int     @default(1)   // How many back-and-forth exchanges
+  was_successful  Boolean @default(true) // Did AI complete the task?
+
+  // Performance metrics
+  first_response_ms  Int? // Time to first response
+  total_duration_ms  Int? // Total session duration
+
+  // What worked/didn't work (for learning)
+  success_notes  String? // "Initial context was sufficient"
+  failure_notes  String? // "Missing: database schema for Users table"
+
+  created_at DateTime @default(now())
+  completed_at DateTime?
+
+  // Relations
+  context_requests QUAD_context_requests[]
+
+  @@index([org_id])
+  @@index([user_id])
+  @@index([session_type])
+  @@index([trigger_entity_type, trigger_entity_id])
+  @@index([created_at])
+  @@map("QUAD_context_sessions")
+}
+
+// Context requests - when AI asks for more information
+// This is the "puzzle piece" tracking
+model QUAD_context_requests {
+  id         String @id @default(uuid()) @db.Uuid
+  session_id String @db.Uuid
+
+  // Request details
+  iteration_number Int    @default(1) // Which iteration this was
+  request_type     String @db.VarChar(50) // code_snippet, schema, file_content, clarification
+
+  // What AI asked for
+  ai_request_text String  // "I need to see the User model schema"
+
+  // Parsed request (for smart retrieval)
+  // { type: "code", files: ["src/models/User.ts"], keywords: ["user", "schema"] }
+  parsed_request Json?
+
+  // What we sent back
+  response_chunks String[] @db.Uuid // chunk_ids that were sent
+  response_tokens Int      @default(0)
+
+  // Did this resolve the AI's need?
+  was_sufficient Boolean @default(true)
+
+  // Learning: categorize what was missing
+  missing_category String? @db.VarChar(50) // schema, api_endpoint, business_logic, config, external_doc
+
+  created_at DateTime @default(now())
+
+  // Relations
+  session QUAD_context_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade)
+
+  @@index([session_id])
+  @@index([request_type])
+  @@index([missing_category])
+  @@map("QUAD_context_requests")
+}
+
+// Memory templates - reusable structure for new orgs/domains/projects
+model QUAD_memory_templates {
+  id String @id @default(uuid()) @db.Uuid
+
+  // Template identification
+  template_name  String @db.VarChar(100) // "Standard Org Memory"
+  memory_level   String @db.VarChar(20)  // org, domain, project
+  template_type  String @db.VarChar(50)  // default, saas, agency, enterprise
+
+  // Template content (markdown with placeholders)
+  // # {{ORG_NAME}} Organization Memory
+  // ## Tech Stack
+  // - Frontend: {{FRONTEND_STACK}}
+  content_template String
+
+  // Sections defined in template
+  // [{ id: "tech_stack", title: "Tech Stack", required: true }]
+  sections Json
+
+  // Usage
+  times_used Int      @default(0)
+  is_default Boolean  @default(false)
+  is_active  Boolean  @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([memory_level])
+  @@index([template_type])
+  @@index([is_default])
+  @@map("QUAD_memory_templates")
+}
+
+// Keyword index for fast retrieval without full-text search
+// Optimized for the "keyword search" phase before RAG
+model QUAD_memory_keywords {
+  id       String @id @default(uuid()) @db.Uuid
+  chunk_id String @db.Uuid
+
+  // The keyword
+  keyword      String @db.VarChar(100)
+  keyword_type String @db.VarChar(30) // tech, concept, entity, action, custom
+
+  // Frequency and importance
+  frequency  Int @default(1) // How many times it appears in chunk
+  importance Int @default(5) // 1-10, derived from position/context
+
+  // For phrase matching
+  bigrams  String[] // ["react hook", "use effect"] for 2-word phrases
+  trigrams String[] // ["react custom hook"] for 3-word phrases
+
+  @@unique([chunk_id, keyword])
+  @@index([keyword])
+  @@index([keyword_type])
+  @@map("QUAD_memory_keywords")
+}
+
+// Context retrieval rules - org-specific rules for what context to send
+model QUAD_context_rules {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Rule identification
+  rule_name    String @db.VarChar(100) // "Always include tech stack"
+  rule_type    String @db.VarChar(50)  // always_include, conditional, exclude
+
+  // Trigger conditions
+  // { session_types: ["ticket_analysis"], keywords: ["database"], entity_types: ["ticket"] }
+  trigger_conditions Json
+
+  // Action
+  // { chunks_to_include: ["tech_stack", "database_schema"], max_tokens: 2000 }
+  action_config Json
+
+  // Priority (higher = evaluated first)
+  priority  Int     @default(50)
+  is_active Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([rule_type])
+  @@index([priority])
+  @@map("QUAD_context_rules")
+}
+
+// Memory update queue - async processing of memory updates
+model QUAD_memory_update_queue {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Source of update
+  source_type     String  @db.VarChar(50) // ticket_closed, meeting_completed, pr_merged, decision_made
+  source_entity_id String @db.Uuid
+
+  // Target document
+  target_document_id String? @db.Uuid
+  target_memory_level String @db.VarChar(20) // org, domain, project
+
+  // Update content
+  update_type    String  @db.VarChar(50) // append, update_section, regenerate
+  section_id     String? @db.VarChar(100)
+  content_to_add String?
+  keywords_found String[]
+
+  // Processing status
+  status      String   @default("pending") @db.VarChar(20) // pending, processing, completed, failed
+  priority    Int      @default(50) // Higher = process sooner
+  attempts    Int      @default(0)
+  error_msg   String?
+  processed_at DateTime?
+
+  created_at DateTime @default(now())
+
+  @@index([org_id])
+  @@index([status])
+  @@index([priority])
+  @@index([created_at])
+  @@map("QUAD_memory_update_queue")
+}
+
+// ============================================================================
+// INFRASTRUCTURE CONFIGURATION (Sandbox, Indexing, Cache Strategies)
+// ============================================================================
+
+// Organization-level infrastructure configuration
+model QUAD_infrastructure_config {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @unique @map("company_id") @db.Uuid
+
+  // Sandbox Strategy: 'dedicated', 'shared', 'on_demand'
+  sandbox_strategy              String @default("shared") @db.VarChar(20)
+  sandbox_pool_size             Int    @default(0) // 0 = auto-calculate based on team size
+  sandbox_idle_timeout_minutes  Int    @default(120)
+  sandbox_work_hours_start      String @default("09:00") @db.VarChar(5)
+  sandbox_work_hours_end        String @default("18:00") @db.VarChar(5)
+  sandbox_work_hours_timezone   String @default("America/New_York") @db.VarChar(50)
+  sandbox_enable_ticket_grouping Boolean @default(true) // Suggest grouping related tickets
+
+  // Indexing Strategy: 'minimal', 'balanced', 'deep'
+  indexing_depth       String  @default("balanced") @db.VarChar(20)
+  indexing_auto_update Boolean @default(true) // Update on webhook
+  indexing_schedule    String  @default("realtime") @db.VarChar(20) // realtime, hourly, daily
+
+  // Cache Strategy: 'basic', 'standard', 'premium', 'custom'
+  cache_tier     String @default("basic") @db.VarChar(20)
+  cache_size_mb  Int    @default(256) // Storage limit in MB
+  cache_ttl_hours Int   @default(1) // Default TTL
+
+  // Cloud Provider (BYOK for infrastructure)
+  cloud_provider   String  @default("gcp") @db.VarChar(20) // gcp, aws, azure
+  cloud_project_id String? @db.VarChar(255) // GCP project or AWS account
+  cloud_region     String? @db.VarChar(50)
+
+  // Encrypted credentials path (in Vaultwarden)
+  cloud_credentials_path String? @db.VarChar(500)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([sandbox_strategy])
+  @@index([indexing_depth])
+  @@index([cache_tier])
+  @@map("QUAD_infrastructure_config")
+}
+
+// Sandbox instances tracking
+model QUAD_sandbox_instances {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  instance_name String @db.VarChar(100)
+  strategy      String @db.VarChar(20) // dedicated, shared, on_demand
+
+  // Status: provisioning, running, idle, terminating, terminated
+  status String @default("provisioning") @db.VarChar(20)
+
+  // Assignment
+  assigned_user_id  String?  @db.Uuid
+  assigned_ticket_ids String[] // Can serve multiple tickets (grouping)
+
+  // URLs
+  api_url String? @db.VarChar(500)
+  ui_url  String? @db.VarChar(500)
+
+  // Database connection (client's database)
+  database_connection_id String? @db.Uuid
+
+  // Lifecycle
+  started_at       DateTime  @default(now())
+  last_activity_at DateTime  @default(now())
+  terminated_at    DateTime?
+
+  // Cost tracking
+  compute_seconds    Int     @default(0)
+  estimated_cost_usd Decimal @default(0) @db.Decimal(10, 4)
+
+  // Cloud resources (IDs for cleanup)
+  cloud_resource_ids Json? // {"api_service": "...", "ui_service": "..."}
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([status])
+  @@index([assigned_user_id])
+  @@index([strategy])
+  @@map("QUAD_sandbox_instances")
+}
+
+// Ticket to sandbox grouping - for DEDICATED strategy optimization
+model QUAD_ticket_sandbox_groups {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  group_name  String  @db.VarChar(200)
+  ticket_ids  String[] // Array of ticket UUIDs in this group
+
+  // Link to sandbox
+  sandbox_instance_id String? @db.Uuid
+
+  // Grouping metadata
+  grouping_reason String  @db.VarChar(50) // same_epic, same_developer, same_domain, manual
+  suggested_by_ai Boolean @default(false)
+  suggestion_confidence Decimal? @db.Decimal(3, 2) // 0.00-1.00
+
+  // Stats
+  tickets_count Int @default(0)
+  estimated_cost_savings_usd Decimal? @db.Decimal(10, 2)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([org_id])
+  @@index([sandbox_instance_id])
+  @@index([grouping_reason])
+  @@map("QUAD_ticket_sandbox_groups")
+}
+
+// Codebase index - stores INDEX only, not full code
+model QUAD_codebase_files {
+  id         String @id @default(uuid()) @db.Uuid
+  project_id String @db.Uuid
+
+  file_path     String @db.VarChar(1000)
+  file_type     String @db.VarChar(20) // java, ts, py, sql, md, etc.
+  github_sha    String @db.VarChar(40) // Current commit SHA
+  last_modified DateTime?
+
+  // MINIMAL level (always indexed)
+  keywords   String[]
+  line_count Int @default(0)
+
+  // BALANCED level (null if MINIMAL)
+  functions      Json?    // [{name, params, returns}]
+  schema_refs    String[] // Table names referenced
+  summary        String?  // AI-generated summary (2-3 sentences)
+  imports        String[] // Import statements
+  token_estimate Int?     // Estimated tokens for full file
+
+  // DEEP level (null if MINIMAL/BALANCED)
+  ast          Json? // Full AST structure
+  dependencies Json? // {calls: [], called_by: []}
+  complexity   Json? // {cyclomatic, loc, test_coverage}
+
+  // Indexing metadata
+  indexing_depth String   @db.VarChar(20) // minimal, balanced, deep
+  indexed_at     DateTime @default(now())
+  index_version  Int      @default(1)
+
+  @@unique([project_id, file_path])
+  @@index([project_id])
+  @@index([file_type])
+  @@index([indexing_depth])
+  @@index([indexed_at])
+  @@map("QUAD_codebase_files")
+}
+
+// Code cache - stores actual file content temporarily
+model QUAD_code_cache {
+  id         String @id @default(uuid()) @db.Uuid
+  org_id     String @map("company_id") @db.Uuid
+  project_id String @db.Uuid
+
+  file_path          String @db.VarChar(1000)
+  content            String // Actual file content
+  content_size_bytes Int
+  github_sha         String @db.VarChar(40)
+
+  // Cache metadata
+  cached_at        DateTime @default(now())
+  expires_at       DateTime
+  access_count     Int      @default(1)
+  last_accessed_at DateTime @default(now())
+
+  // Pinning (for PREMIUM tier)
+  is_pinned   Boolean @default(false)
+  pinned_by   String? @db.Uuid
+  pin_reason  String? @db.VarChar(200)
+
+  @@unique([project_id, file_path])
+  @@index([org_id])
+  @@index([project_id])
+  @@index([expires_at])
+  @@index([is_pinned])
+  @@index([last_accessed_at])
+  @@map("QUAD_code_cache")
+}
+
+// Cache storage usage tracking (daily aggregation)
+model QUAD_cache_usage {
+  id     String   @id @default(uuid()) @db.Uuid
+  org_id String   @map("company_id") @db.Uuid
+  date   DateTime @db.Date
+
+  tier String @db.VarChar(20) // basic, standard, premium, custom
+
+  storage_used_mb  Decimal @default(0) @db.Decimal(10, 2)
+  storage_limit_mb Decimal @db.Decimal(10, 2)
+
+  cache_hits       Int @default(0)
+  cache_misses     Int @default(0)
+  github_api_calls Int @default(0)
+
+  cost_usd Decimal @default(0) @db.Decimal(10, 4)
+
+  @@unique([org_id, date])
+  @@index([org_id])
+  @@index([date])
+  @@map("QUAD_cache_usage")
+}
+
+// Sandbox usage tracking (for billing and analytics)
+model QUAD_sandbox_usage {
+  id     String   @id @default(uuid()) @db.Uuid
+  org_id String   @map("company_id") @db.Uuid
+  date   DateTime @db.Date
+
+  strategy String @db.VarChar(20) // dedicated, shared, on_demand
+
+  // Pool stats (for shared strategy)
+  pool_size           Int @default(0)
+  peak_concurrent     Int @default(0)
+  avg_utilization_pct Decimal? @db.Decimal(5, 2)
+
+  // Instance stats
+  instances_created    Int @default(0)
+  instances_terminated Int @default(0)
+  total_runtime_hours  Decimal @default(0) @db.Decimal(10, 2)
+
+  // Developer activity
+  unique_developers   Int @default(0)
+  tickets_worked      Int @default(0)
+  groups_suggested    Int @default(0)
+  groups_accepted     Int @default(0)
+
+  // Cost
+  cost_usd Decimal @default(0) @db.Decimal(10, 4)
+
+  @@unique([org_id, date])
+  @@index([org_id])
+  @@index([date])
+  @@map("QUAD_sandbox_usage")
+}
+
+// Indexing usage tracking
+model QUAD_indexing_usage {
+  id         String   @id @default(uuid()) @db.Uuid
+  org_id     String   @map("company_id") @db.Uuid
+  project_id String   @db.Uuid
+  date       DateTime @db.Date
+
+  depth String @db.VarChar(20) // minimal, balanced, deep
+
+  // File stats
+  files_indexed     Int @default(0)
+  files_updated     Int @default(0)
+  total_files       Int @default(0)
+
+  // Storage stats
+  index_size_kb Decimal @default(0) @db.Decimal(10, 2)
+
+  // AI summaries generated (for BALANCED/DEEP)
+  summaries_generated Int @default(0)
+  summary_tokens_used Int @default(0)
+
+  // Cost
+  cost_usd Decimal @default(0) @db.Decimal(10, 4)
+
+  @@unique([org_id, project_id, date])
+  @@index([org_id])
+  @@index([project_id])
+  @@index([date])
+  @@map("QUAD_indexing_usage")
 }

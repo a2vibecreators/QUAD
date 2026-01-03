@@ -302,6 +302,20 @@ export default function PageNavigation({ sections }: PageNavigationProps) {
                           📊 Dashboard
                         </Link>
                         <Link
+                          href="/requirements"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                        >
+                          📋 Requirements
+                        </Link>
+                        <Link
+                          href="/tickets"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                        >
+                          🎫 Tickets
+                        </Link>
+                        <Link
                           href="/dashboard"
                           onClick={() => setUserMenuOpen(false)}
                           className="block px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"

@@ -3,9 +3,13 @@
  *
  * Seeds:
  * - QUAD_core_roles: Master list of role templates
+ * - QUAD Portal Organization: Platform admin org (invisible)
+ * - Test Organizations: NutriNine Test, A2Vibes Test
+ * - Portal Access: suman@quadframe.work as PORTAL_OWNER
  */
 
 import { PrismaClient } from '../src/generated/prisma';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -436,7 +440,182 @@ async function main() {
     }
   }
 
-  console.log(`\n✨ Seed completed! ${CORE_ROLES.length} core roles seeded.`);
+  console.log(`\n✅ Core roles seeded: ${CORE_ROLES.length} roles\n`);
+
+  // ==========================================================================
+  // PORTAL ORGANIZATION
+  // ==========================================================================
+  console.log('🏢 Seeding Portal Organization...');
+
+  // Find or create portal admin user
+  let portalUser = await prisma.qUAD_users.findUnique({
+    where: { email: 'suman@quadframe.work' }
+  });
+
+  // Create QUAD Portal Organization first (needed for user creation)
+  let portalOrg = await prisma.qUAD_organizations.findFirst({
+    where: { org_type: 'PORTAL' }
+  });
+
+  if (!portalOrg) {
+    portalOrg = await prisma.qUAD_organizations.create({
+      data: {
+        name: 'QUAD Portal',
+        slug: 'portal',
+        admin_email: 'suman@quadframe.work',
+        description: 'QUAD Framework platform administration and testing',
+        size: 'small',
+        org_type: 'PORTAL',
+        is_visible: false, // Hidden from org listings
+        is_active: true,
+      }
+    });
+    console.log('  ✅ Created QUAD Portal organization');
+  } else {
+    console.log('  ⏭️  QUAD Portal organization already exists');
+  }
+
+  // Create portal admin user if not exists
+  if (!portalUser) {
+    const hashedPassword = await bcrypt.hash('portal-admin-temp-123', 10);
+    portalUser = await prisma.qUAD_users.create({
+      data: {
+        email: 'suman@quadframe.work',
+        password_hash: hashedPassword,
+        full_name: 'Suman Addanki',
+        org_id: portalOrg.id,
+        role: 'ADMIN',
+        is_active: true,
+        email_verified: true,
+      }
+    });
+    console.log('  ✅ Created portal admin user: suman@quadframe.work');
+  } else {
+    console.log('  ⏭️  Portal admin user already exists');
+  }
+
+  // Create org membership for portal user
+  const portalMembership = await prisma.qUAD_org_members.findFirst({
+    where: { org_id: portalOrg.id, user_id: portalUser.id }
+  });
+
+  if (!portalMembership) {
+    await prisma.qUAD_org_members.create({
+      data: {
+        org_id: portalOrg.id,
+        user_id: portalUser.id,
+        role: 'OWNER',
+        is_primary: true,
+        is_active: true,
+      }
+    });
+    console.log('  ✅ Created org membership for portal admin');
+  }
+
+  // Grant portal access
+  const existingAccess = await prisma.qUAD_portal_access.findUnique({
+    where: { user_id: portalUser.id }
+  });
+
+  if (!existingAccess) {
+    await prisma.qUAD_portal_access.create({
+      data: {
+        user_id: portalUser.id,
+        portal_role: 'PORTAL_OWNER',
+        can_view_all_orgs: true,
+        can_impersonate: true,
+        can_manage_billing: true,
+        can_manage_ai_pool: true,
+        can_access_test_orgs: true,
+        is_active: true,
+      }
+    });
+    console.log('  ✅ Granted PORTAL_OWNER access to suman@quadframe.work');
+  } else {
+    console.log('  ⏭️  Portal access already exists');
+  }
+
+  // ==========================================================================
+  // TEST ORGANIZATIONS
+  // ==========================================================================
+  console.log('\n🧪 Seeding Test Organizations...');
+
+  // NutriNine Test Org
+  let nutriNineTestOrg = await prisma.qUAD_organizations.findFirst({
+    where: { slug: 'nutrinine-test' }
+  });
+
+  if (!nutriNineTestOrg) {
+    nutriNineTestOrg = await prisma.qUAD_organizations.create({
+      data: {
+        name: 'NutriNine Test',
+        slug: 'nutrinine-test',
+        admin_email: 'suman@quadframe.work',
+        description: 'Test organization for nutrinine.ai - health tracking domain testing',
+        size: 'small',
+        org_type: 'TEST',
+        is_visible: false,
+        is_active: true,
+      }
+    });
+    console.log('  ✅ Created NutriNine Test organization');
+
+    // Add portal admin as member
+    await prisma.qUAD_org_members.create({
+      data: {
+        org_id: nutriNineTestOrg.id,
+        user_id: portalUser.id,
+        role: 'OWNER',
+        is_primary: false,
+        is_active: true,
+      }
+    });
+  } else {
+    console.log('  ⏭️  NutriNine Test organization already exists');
+  }
+
+  // A2Vibes Test Org
+  let a2VibesTestOrg = await prisma.qUAD_organizations.findFirst({
+    where: { slug: 'a2vibes-test' }
+  });
+
+  if (!a2VibesTestOrg) {
+    a2VibesTestOrg = await prisma.qUAD_organizations.create({
+      data: {
+        name: 'A2Vibes Test',
+        slug: 'a2vibes-test',
+        admin_email: 'suman@quadframe.work',
+        description: 'Test organization for a2vibes.life - lifestyle project testing',
+        size: 'small',
+        org_type: 'TEST',
+        is_visible: false,
+        is_active: true,
+      }
+    });
+    console.log('  ✅ Created A2Vibes Test organization');
+
+    // Add portal admin as member
+    await prisma.qUAD_org_members.create({
+      data: {
+        org_id: a2VibesTestOrg.id,
+        user_id: portalUser.id,
+        role: 'OWNER',
+        is_primary: false,
+        is_active: true,
+      }
+    });
+  } else {
+    console.log('  ⏭️  A2Vibes Test organization already exists');
+  }
+
+  // ==========================================================================
+  // SUMMARY
+  // ==========================================================================
+  console.log('\n✨ Seed completed!');
+  console.log('   - Core roles: ' + CORE_ROLES.length);
+  console.log('   - Portal org: QUAD Portal (hidden)');
+  console.log('   - Test orgs: NutriNine Test, A2Vibes Test');
+  console.log('   - Portal admin: suman@quadframe.work (PORTAL_OWNER)');
 }
 
 main()

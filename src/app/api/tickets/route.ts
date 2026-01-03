@@ -1,11 +1,12 @@
 /**
  * GET /api/tickets - List tickets with filtering
- * POST /api/tickets - Create a new ticket
+ * POST /api/tickets - Create a new ticket (with intelligent assignment)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { assignTicket, recordAssignment } from '@/lib/services/assignment-service';
 
 // GET: List tickets with filtering and board view
 export async function GET(request: NextRequest) {
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
       finalTicketType = 'subtask';
     }
 
-    // Create ticket
+    // Create ticket first (without assignment if auto-assign needed)
     const ticket = await prisma.qUAD_tickets.create({
       data: {
         domain_id,
@@ -223,7 +224,7 @@ export async function POST(request: NextRequest) {
         ticket_type: finalTicketType,
         status: 'backlog',
         priority: priority || 'medium',
-        assigned_to,
+        assigned_to: assigned_to || null, // Will be updated if auto-assigned
         reporter_id: payload.userId,
         story_points,
         due_date: due_date ? new Date(due_date) : null
@@ -237,6 +238,39 @@ export async function POST(request: NextRequest) {
         }
       }
     });
+
+    // Intelligent assignment if not manually assigned
+    let assignmentResult = null;
+    if (!assigned_to) {
+      try {
+        assignmentResult = await assignTicket(ticket.id, domain_id, payload.companyId);
+
+        // Update ticket with assigned user
+        await prisma.qUAD_tickets.update({
+          where: { id: ticket.id },
+          data: { assigned_to: assignmentResult.assigned_to }
+        });
+
+        // Record assignment for audit and learning
+        await recordAssignment(ticket.id, assignmentResult);
+
+        // Merge assignment info into response
+        (ticket as Record<string, unknown>).assigned_to = assignmentResult.assigned_to;
+        (ticket as Record<string, unknown>).assignment_info = {
+          type: assignmentResult.assignment_type,
+          score: assignmentResult.score,
+          reason: assignmentResult.reason,
+          assigned_name: assignmentResult.assigned_name
+        };
+      } catch (assignError) {
+        // Assignment failed (e.g., no developers) - ticket still created unassigned
+        console.warn('Auto-assignment failed:', assignError);
+        (ticket as Record<string, unknown>).assignment_info = {
+          type: 'unassigned',
+          reason: 'No developers available for auto-assignment'
+        };
+      }
+    }
 
     return NextResponse.json(ticket, { status: 201 });
   } catch (error) {

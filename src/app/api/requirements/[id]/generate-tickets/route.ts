@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
+import { assignTicket, recordAssignment } from '@/lib/services/assignment-service';
 
 // AI-generated ticket structure
 interface AITicket {
@@ -368,8 +369,10 @@ export async function POST(
         }
       }
 
-      // Create tickets
+      // Create tickets with intelligent assignment
       const createdTickets = [];
+      const assignmentResults: Array<{ ticketId: string; assignedTo: string | null; assignedName: string; reason: string }> = [];
+
       for (const t of analysis.tickets) {
         const ticketNumber = `${ticketPrefix}-${ticketNum}`;
         ticketNum++;
@@ -403,6 +406,32 @@ export async function POST(
             reporter_id: payload.userId
           }
         });
+
+        // Intelligent assignment for each ticket
+        try {
+          const assignment = await assignTicket(ticket.id, requirement.domain_id, payload.companyId);
+          await prisma.qUAD_tickets.update({
+            where: { id: ticket.id },
+            data: { assigned_to: assignment.assigned_to }
+          });
+          await recordAssignment(ticket.id, assignment);
+          (ticket as Record<string, unknown>).assigned_to = assignment.assigned_to;
+          assignmentResults.push({
+            ticketId: ticket.id,
+            assignedTo: assignment.assigned_to,
+            assignedName: assignment.assigned_name,
+            reason: assignment.reason
+          });
+        } catch {
+          // No developers available - ticket remains unassigned
+          assignmentResults.push({
+            ticketId: ticket.id,
+            assignedTo: null,
+            assignedName: 'Unassigned',
+            reason: 'No developers available for auto-assignment'
+          });
+        }
+
         createdTickets.push(ticket);
       }
 
@@ -417,28 +446,38 @@ export async function POST(
         }
       });
 
+      // Count how many were auto-assigned
+      const assignedCount = assignmentResults.filter(a => a.assignedTo !== null).length;
+
       return NextResponse.json({
         message: 'BA Agent generated tickets successfully. Human review required.',
         requirement_id: requirement.id,
         requirement_title: requirement.title,
         tickets_generated: createdTickets.length,
-        tickets: createdTickets.map(t => ({
-          id: t.id,
-          ticket_number: t.ticket_number,
-          title: t.title,
-          ticket_type: t.ticket_type,
-          priority: t.priority,
-          story_points: t.story_points,
-          ai_confidence: Number(t.ai_confidence),
-          status: t.status
-        })),
+        tickets_auto_assigned: assignedCount,
+        tickets: createdTickets.map(t => {
+          const assignment = assignmentResults.find(a => a.ticketId === t.id);
+          return {
+            id: t.id,
+            ticket_number: t.ticket_number,
+            title: t.title,
+            ticket_type: t.ticket_type,
+            priority: t.priority,
+            story_points: t.story_points,
+            ai_confidence: Number(t.ai_confidence),
+            status: t.status,
+            assigned_to: assignment?.assignedTo || null,
+            assigned_name: assignment?.assignedName || 'Unassigned',
+            assignment_reason: assignment?.reason || null
+          };
+        }),
         ai_summary: analysis.summary,
         human_review_required: true,
         next_steps: [
           'Review generated tickets in backlog',
+          'Verify auto-assignments are appropriate',
           'Adjust titles, descriptions, and estimates as needed',
-          'Move approved tickets to active cycle',
-          'Assign tickets to team members'
+          'Move approved tickets to active cycle'
         ]
       });
 
