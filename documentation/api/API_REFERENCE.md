@@ -1,7 +1,8 @@
-# QUAD Platform - API Reference
+# QUAD Platform - Complete API Reference
 
-**Date:** January 1, 2026
-**Version:** 1.0
+**Version:** 2.0
+**Last Updated:** January 3, 2026
+**Total Routes:** 115+
 **Base URL:** `/api`
 
 ---
@@ -10,37 +11,71 @@
 
 1. [Overview](#overview)
 2. [Authentication](#authentication)
-3. [Organizations (Companies API)](#organizations-companies-api)
+3. [Organizations](#organizations)
 4. [Users](#users)
 5. [Roles](#roles)
 6. [Domains](#domains)
-7. [Domain Members](#domain-members)
-8. [Resources](#resources)
-9. [Flows](#flows)
-10. [Circles](#circles)
-11. [Circle Members](#circle-members)
-12. [Adoption Matrix](#adoption-matrix)
-13. [Work Sessions](#work-sessions)
-14. [Workload Metrics](#workload-metrics)
-15. [Error Responses](#error-responses)
-16. [Rate Limiting](#rate-limiting)
-17. [Webhooks (Planned)](#webhooks-planned)
+7. [Circles](#circles)
+8. [Flows](#flows)
+9. [Cycles](#cycles)
+10. [Requirements](#requirements)
+11. [Tickets](#tickets)
+12. [Resources](#resources)
+13. [AI & Chat](#ai--chat)
+14. [Memory & Context](#memory--context)
+15. [Git Integration](#git-integration)
+16. [Meeting Integration](#meeting-integration)
+17. [Pull Requests](#pull-requests)
+18. [Dashboard & Analytics](#dashboard--analytics)
+19. [Gamification](#gamification)
+20. [Rankings](#rankings)
+21. [Kudos](#kudos)
+22. [Training](#training)
+23. [Skills](#skills)
+24. [User Skills](#user-skills)
+25. [Skill Feedback](#skill-feedback)
+26. [Risks](#risks)
+27. [Database Operations](#database-operations)
+28. [Adoption Matrix](#adoption-matrix)
+29. [Workload](#workload)
+30. [Work Sessions](#work-sessions)
+31. [Blueprint Agent](#blueprint-agent)
+32. [Book Generation](#book-generation)
+33. [Admin & BYOK](#admin--byok)
+34. [Setup](#setup)
+35. [Codebase](#codebase)
+36. [Meetings](#meetings)
+37. [Tools](#tools)
+38. [Error Responses](#error-responses)
+39. [Rate Limiting](#rate-limiting)
 
 ---
 
 ## Overview
 
-QUAD Platform provides a RESTful API with 24 endpoints across 12 categories. All endpoints (except auth) require JWT authentication via Bearer token.
+QUAD Platform provides a comprehensive RESTful API with **115+ endpoints** across **37 categories**. Built on Next.js 14 App Router with Prisma ORM connecting to PostgreSQL.
+
+### Architecture
+
+```
+Client Request → Next.js API Route → Prisma ORM → PostgreSQL
+                     ↓
+              JWT Authentication
+                     ↓
+              Business Logic
+                     ↓
+              JSON Response
+```
 
 ### Authentication Header
+
+All endpoints (except `/auth/*` public routes) require:
 
 ```
 Authorization: Bearer <jwt_token>
 ```
 
 ### Response Format
-
-All responses are JSON with consistent structure:
 
 **Success:**
 ```json
@@ -54,7 +89,7 @@ All responses are JSON with consistent structure:
 ```json
 {
   "error": "Error description",
-  "details": { ... }  // Optional
+  "details": { ... }
 }
 ```
 
@@ -75,9 +110,39 @@ All responses are JSON with consistent structure:
 
 ## Authentication
 
+### POST /api/auth/signup
+
+Create a new user account with SSO (Google OAuth).
+
+**Request Body:**
+```json
+{
+  "email": "user@company.com",
+  "name": "John Doe",
+  "companyName": "Acme Corp"
+}
+```
+
+**Response (201):**
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@company.com",
+    "full_name": "John Doe"
+  },
+  "company": {
+    "id": "uuid",
+    "name": "Acme Corp"
+  }
+}
+```
+
+---
+
 ### POST /api/auth/register
 
-Create a new user and company.
+Legacy registration with email/password.
 
 **Request Body:**
 ```json
@@ -92,30 +157,17 @@ Create a new user and company.
 **Response (201):**
 ```json
 {
-  "user": {
-    "id": "uuid",
-    "email": "admin@company.com",
-    "full_name": "John Doe",
-    "company_id": "uuid"
-  },
-  "company": {
-    "id": "uuid",
-    "name": "Acme Corp"
-  },
+  "user": { "id": "uuid", "email": "admin@company.com" },
+  "company": { "id": "uuid", "name": "Acme Corp" },
   "token": "jwt_token_here"
 }
 ```
-
-**Notes:**
-- Creates organization with default 6 roles (ADMIN, MANAGER, TECH_LEAD, DEVELOPER, QA, OBSERVER)
-- User is assigned ADMIN role automatically
-- Creates adoption matrix entry for user
 
 ---
 
 ### POST /api/auth/login
 
-Authenticate and get JWT token.
+Authenticate with email/password.
 
 **Request Body:**
 ```json
@@ -133,9 +185,50 @@ Authenticate and get JWT token.
     "id": "uuid",
     "email": "admin@company.com",
     "full_name": "John Doe",
-    "company_id": "uuid",
-    "role": "ADMIN"
+    "company_id": "uuid"
   }
+}
+```
+
+---
+
+### POST /api/auth/send-code
+
+Send verification code to email.
+
+**Request Body:**
+```json
+{
+  "email": "user@company.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "Verification code sent"
+}
+```
+
+---
+
+### POST /api/auth/verify-code
+
+Verify email code.
+
+**Request Body:**
+```json
+{
+  "email": "user@company.com",
+  "code": "123456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "verified": true,
+  "token": "jwt_token_here"
 }
 ```
 
@@ -156,27 +249,88 @@ End user session.
 
 ---
 
-## Organizations (Companies API)
+### GET /api/auth/sso-config
 
-> **Note:** The database table was renamed from `QUAD_companies` to `QUAD_organizations`. The API endpoints remain as `/api/companies` for backward compatibility. The `company_id` field in API responses maps to `org_id` in Prisma/code.
+Get SSO configuration for organization.
 
-### GET /api/companies
-
-List all organizations (ADMIN only).
-
-**Headers:** `Authorization: Bearer <token>`
+**Query Parameters:**
+- `domain=company.com` - Email domain
 
 **Response (200):**
 ```json
 {
-  "companies": [
+  "provider": "google",
+  "enabled": true,
+  "clientId": "google_client_id"
+}
+```
+
+---
+
+### GET /api/auth/user-domains
+
+Get domains accessible by current user.
+
+**Response (200):**
+```json
+{
+  "domains": [
+    { "id": "uuid", "name": "Engineering", "path": "/engineering" }
+  ]
+}
+```
+
+---
+
+### POST /api/auth/set-domain
+
+Set active domain for user session.
+
+**Request Body:**
+```json
+{
+  "domainId": "uuid"
+}
+```
+
+---
+
+### POST /api/auth/request-access
+
+Request access to a domain.
+
+**Request Body:**
+```json
+{
+  "domainId": "uuid",
+  "message": "I need access for project X"
+}
+```
+
+---
+
+### GET /api/auth/[...nextauth]
+
+NextAuth.js handler for OAuth flows (Google, GitHub, etc.).
+
+---
+
+## Organizations
+
+### GET /api/organizations
+
+List all organizations (admin only).
+
+**Response (200):**
+```json
+{
+  "organizations": [
     {
       "id": "uuid",
       "name": "Acme Corp",
       "admin_email": "admin@acme.com",
-      "size": "medium",
       "is_active": true,
-      "_count": { "users": 5 }
+      "_count": { "users": 25 }
     }
   ]
 }
@@ -184,50 +338,56 @@ List all organizations (ADMIN only).
 
 ---
 
-### GET /api/companies/{id}
+### POST /api/organizations
 
-Get organization by ID.
+Create a new organization.
 
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200):**
+**Request Body:**
 ```json
 {
-  "id": "uuid",
-  "name": "Acme Corp",
-  "admin_email": "admin@acme.com",
-  "size": "medium",
-  "is_active": true,
-  "users": [...],
-  "domains": [...],
-  "roles": [...]
+  "name": "New Company",
+  "admin_email": "admin@newcompany.com",
+  "size": "medium"
 }
 ```
 
 ---
 
-### PUT /api/companies/{id}
+### GET /api/organizations/[id]/invite
 
-Update organization details (ADMIN only).
+List pending invitations for organization.
 
-**Headers:** `Authorization: Bearer <token>`
+---
+
+### POST /api/organizations/[id]/invite
+
+Invite user to organization.
 
 **Request Body:**
 ```json
 {
-  "name": "Acme Corporation",
-  "size": "large"
+  "email": "newuser@company.com",
+  "role_id": "uuid"
 }
 ```
 
-**Response (200):**
-```json
-{
-  "id": "uuid",
-  "name": "Acme Corporation",
-  "size": "large"
-}
-```
+---
+
+### GET /api/companies
+
+List companies (legacy endpoint, maps to organizations).
+
+---
+
+### GET /api/companies/[id]
+
+Get company details.
+
+---
+
+### PUT /api/companies/[id]
+
+Update company.
 
 ---
 
@@ -236,8 +396,6 @@ Update organization details (ADMIN only).
 ### GET /api/users
 
 List all users in organization.
-
-**Headers:** `Authorization: Bearer <token>`
 
 **Query Parameters:**
 - `include_inactive=true` - Include deactivated users
@@ -262,9 +420,7 @@ List all users in organization.
 
 ### POST /api/users
 
-Create a new user (ADMIN only).
-
-**Headers:** `Authorization: Bearer <token>`
+Create a new user (admin only).
 
 **Request Body:**
 ```json
@@ -276,31 +432,17 @@ Create a new user (ADMIN only).
 }
 ```
 
-**Response (201):**
-```json
-{
-  "id": "uuid",
-  "email": "newuser@company.com",
-  "full_name": "New User",
-  "role_id": "uuid"
-}
-```
-
 ---
 
-### GET /api/users/{id}
+### GET /api/users/[id]
 
 Get user by ID.
 
-**Headers:** `Authorization: Bearer <token>`
-
 ---
 
-### PUT /api/users/{id}
+### PUT /api/users/[id]
 
-Update user (ADMIN or self).
-
-**Headers:** `Authorization: Bearer <token>`
+Update user.
 
 **Request Body:**
 ```json
@@ -313,11 +455,9 @@ Update user (ADMIN or self).
 
 ---
 
-### DELETE /api/users/{id}
+### DELETE /api/users/[id]
 
-Delete user (ADMIN only).
-
-**Headers:** `Authorization: Bearer <token>`
+Delete user (admin only).
 
 ---
 
@@ -326,11 +466,6 @@ Delete user (ADMIN only).
 ### GET /api/roles
 
 List all roles in organization.
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Query Parameters:**
-- `include_inactive=true` - Include deactivated roles
 
 **Response (200):**
 ```json
@@ -344,8 +479,7 @@ List all roles in organization.
       "u_participation": "SUPPORT",
       "a_participation": "INFORM",
       "d_participation": "PRIMARY",
-      "hierarchy_level": 40,
-      "_count": { "users": 3 }
+      "hierarchy_level": 40
     }
   ]
 }
@@ -355,9 +489,7 @@ List all roles in organization.
 
 ### POST /api/roles
 
-Create a new role (ADMIN only).
-
-**Headers:** `Authorization: Bearer <token>`
+Create a new role.
 
 **Request Body:**
 ```json
@@ -367,43 +499,51 @@ Create a new role (ADMIN only).
   "description": "Facilitates agile ceremonies",
   "can_manage_users": false,
   "can_manage_domains": true,
-  "can_manage_flows": true,
   "q_participation": "PRIMARY",
-  "u_participation": "PRIMARY",
-  "a_participation": "SUPPORT",
-  "d_participation": "REVIEW",
   "hierarchy_level": 70
 }
 ```
 
 **Participation Values:** `PRIMARY`, `SUPPORT`, `REVIEW`, `INFORM`, `null`
 
-**Response (201):**
-```json
-{
-  "id": "uuid",
-  "role_code": "SCRUM_MASTER",
-  "role_name": "Scrum Master"
-}
-```
-
 ---
 
-### GET /api/roles/{id}
+### GET /api/roles/[id]
 
 Get role by ID with assigned users.
 
 ---
 
-### PUT /api/roles/{id}
+### PUT /api/roles/[id]
 
-Update role (ADMIN only). Cannot change `role_code`.
+Update role (admin only).
 
 ---
 
-### DELETE /api/roles/{id}
+### DELETE /api/roles/[id]
 
-Delete role (ADMIN only). Cannot delete system roles or roles with users.
+Delete role (cannot delete system roles or roles with users).
+
+---
+
+### GET /api/core-roles
+
+List master role templates (18 predefined roles).
+
+**Response (200):**
+```json
+{
+  "coreRoles": [
+    {
+      "id": "uuid",
+      "role_code": "SUPER_ADMIN",
+      "role_name": "Super Admin",
+      "category": "ADMIN",
+      "hierarchy_level": 100
+    }
+  ]
+}
+```
 
 ---
 
@@ -412,8 +552,6 @@ Delete role (ADMIN only). Cannot delete system roles or roles with users.
 ### GET /api/domains
 
 List all domains in organization (hierarchical).
-
-**Headers:** `Authorization: Bearer <token>`
 
 **Response (200):**
 ```json
@@ -426,12 +564,7 @@ List all domains in organization (hierarchical).
       "domain_type": "division",
       "path": "/engineering",
       "sub_domains": [
-        {
-          "id": "uuid",
-          "name": "Frontend",
-          "parent_domain_id": "parent_uuid",
-          "path": "/engineering/frontend"
-        }
+        { "id": "uuid", "name": "Frontend", "path": "/engineering/frontend" }
       ]
     }
   ]
@@ -440,49 +573,65 @@ List all domains in organization (hierarchical).
 
 ---
 
+### GET /api/domains/list
+
+Simple flat list of domains.
+
+---
+
 ### POST /api/domains
 
 Create a new domain.
-
-**Headers:** `Authorization: Bearer <token>`
 
 **Request Body:**
 ```json
 {
   "name": "Backend",
-  "parent_domain_id": "parent_uuid",  // Optional
+  "parent_domain_id": "uuid",
   "domain_type": "team"
 }
 ```
 
-**Notes:**
-- Creates 4 default circles (Management, Development, QA, Infrastructure)
+**Note:** Creates 4 default circles (Management, Development, QA, Infrastructure).
 
 ---
 
-### GET /api/domains/{id}
+### POST /api/domains/create
+
+Alternative domain creation endpoint.
+
+---
+
+### GET /api/domains/[id]
 
 Get domain with members, resources, and circles.
 
 ---
 
-### PUT /api/domains/{id}
+### PUT /api/domains/[id]
 
 Update domain.
 
 ---
 
-### DELETE /api/domains/{id}
+### PATCH /api/domains/[id]
 
-Delete domain and all sub-domains (cascading).
+Partial update/restore deleted domain.
 
 ---
 
-## Domain Members
+### DELETE /api/domains/[id]
 
-### GET /api/domains/{id}/members
+Soft-delete domain.
 
-List members of a domain.
+**Query Parameters:**
+- `cascade=true` - Also delete sub-domains
+
+---
+
+### GET /api/domains/[id]/members
+
+List domain members.
 
 **Response (200):**
 ```json
@@ -501,7 +650,7 @@ List members of a domain.
 
 ---
 
-### POST /api/domains/{id}/members
+### POST /api/domains/[id]/members
 
 Add member to domain.
 
@@ -516,9 +665,474 @@ Add member to domain.
 
 ---
 
-### DELETE /api/domains/{id}/members/{userId}
+### DELETE /api/domains/[id]/members
 
 Remove member from domain.
+
+**Query Parameters:**
+- `userId=uuid` - User to remove
+
+---
+
+## Circles
+
+### GET /api/circles
+
+List circles (optionally filtered by domain).
+
+**Query Parameters:**
+- `domain_id=uuid` - Filter by domain
+
+---
+
+### POST /api/circles
+
+Create a new circle.
+
+**Request Body:**
+```json
+{
+  "domain_id": "uuid",
+  "circle_number": 5,
+  "circle_name": "Security",
+  "lead_user_id": "uuid"
+}
+```
+
+---
+
+### GET /api/circles/[id]
+
+Get circle with members.
+
+---
+
+### PUT /api/circles/[id]
+
+Update circle.
+
+---
+
+### DELETE /api/circles/[id]
+
+Delete circle and memberships.
+
+---
+
+### GET /api/circles/[id]/members
+
+List circle members.
+
+---
+
+### POST /api/circles/[id]/members
+
+Add member to circle.
+
+**Request Body:**
+```json
+{
+  "user_id": "uuid",
+  "role": "member",
+  "allocation_pct": 100
+}
+```
+
+---
+
+### DELETE /api/circles/[id]/members
+
+Remove member from circle.
+
+---
+
+## Flows
+
+### GET /api/flows
+
+List flows (optionally filtered).
+
+**Query Parameters:**
+- `domain_id=uuid` - Filter by domain
+- `quad_stage=Q|U|A|D` - Filter by stage
+- `assigned_to=uuid` - Filter by assignee
+- `cycle_id=uuid` - Filter by cycle
+
+**Response (200):**
+```json
+{
+  "flows": [
+    {
+      "id": "uuid",
+      "title": "Implement user authentication",
+      "quad_stage": "D",
+      "stage_status": "in_progress",
+      "priority": "high",
+      "assigned_to": "uuid",
+      "assignee": { "full_name": "Jane Doe" }
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/flows
+
+Create a new flow.
+
+**Request Body:**
+```json
+{
+  "domain_id": "uuid",
+  "title": "Implement user authentication",
+  "description": "Add login/logout functionality",
+  "flow_type": "feature",
+  "priority": "high",
+  "assigned_to": "uuid"
+}
+```
+
+---
+
+### GET /api/flows/[id]
+
+Get flow with stage history.
+
+---
+
+### PUT /api/flows/[id]
+
+Update flow. Stage transitions are logged.
+
+**Request Body:**
+```json
+{
+  "quad_stage": "U",
+  "stage_status": "completed",
+  "change_reason": "Requirements clarified"
+}
+```
+
+---
+
+### DELETE /api/flows/[id]
+
+Delete flow and history.
+
+---
+
+### POST /api/flows/[id]/branch
+
+Create Git branch for flow.
+
+**Request Body:**
+```json
+{
+  "repository_id": "uuid",
+  "branch_name": "feature/FLOW-123-auth"
+}
+```
+
+---
+
+### GET /api/flows/[id]/branch
+
+Get branch info for flow.
+
+---
+
+### POST /api/flows/[id]/pull-request
+
+Create pull request for flow.
+
+**Request Body:**
+```json
+{
+  "title": "Add authentication feature",
+  "description": "Implements login/logout",
+  "base_branch": "main"
+}
+```
+
+---
+
+### GET /api/flows/[id]/pull-request
+
+Get pull request info for flow.
+
+---
+
+## Cycles
+
+### GET /api/cycles
+
+List cycles (sprints).
+
+**Query Parameters:**
+- `domain_id=uuid` - Filter by domain
+- `status=active|completed|planned`
+
+**Response (200):**
+```json
+{
+  "cycles": [
+    {
+      "id": "uuid",
+      "name": "Sprint 23",
+      "start_date": "2026-01-06",
+      "end_date": "2026-01-20",
+      "status": "active",
+      "goal": "Complete authentication module",
+      "_count": { "flows": 8, "tickets": 24 }
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/cycles
+
+Create a new cycle.
+
+**Request Body:**
+```json
+{
+  "domain_id": "uuid",
+  "name": "Sprint 24",
+  "start_date": "2026-01-20",
+  "end_date": "2026-02-03",
+  "goal": "Payment integration"
+}
+```
+
+---
+
+### GET /api/cycles/[id]
+
+Get cycle with flows and metrics.
+
+---
+
+### PUT /api/cycles/[id]
+
+Update cycle.
+
+---
+
+### DELETE /api/cycles/[id]
+
+Delete cycle (moves flows to backlog).
+
+---
+
+## Requirements
+
+### GET /api/requirements
+
+List requirements.
+
+**Query Parameters:**
+- `domain_id=uuid` - Filter by domain
+- `status=draft|approved|in_progress|completed`
+
+**Response (200):**
+```json
+{
+  "requirements": [
+    {
+      "id": "uuid",
+      "title": "User Authentication",
+      "description": "System shall support SSO login",
+      "type": "functional",
+      "priority": "high",
+      "status": "approved"
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/requirements
+
+Create a new requirement.
+
+**Request Body:**
+```json
+{
+  "domain_id": "uuid",
+  "title": "Payment Processing",
+  "description": "System shall process credit card payments",
+  "type": "functional",
+  "priority": "high"
+}
+```
+
+---
+
+### GET /api/requirements/[id]
+
+Get requirement with linked flows.
+
+---
+
+### PUT /api/requirements/[id]
+
+Update requirement.
+
+---
+
+### DELETE /api/requirements/[id]
+
+Delete requirement.
+
+---
+
+### POST /api/requirements/[id]/analyze
+
+AI-analyze requirement for completeness and ambiguity.
+
+**Response (200):**
+```json
+{
+  "analysis": {
+    "completeness_score": 85,
+    "ambiguity_issues": ["Define 'fast' in concrete terms"],
+    "suggested_acceptance_criteria": ["..."],
+    "estimated_complexity": "medium"
+  }
+}
+```
+
+---
+
+### POST /api/requirements/[id]/generate-tickets
+
+AI-generate tickets from requirement.
+
+**Request Body:**
+```json
+{
+  "ticket_count": 5,
+  "include_subtasks": true
+}
+```
+
+---
+
+## Tickets
+
+### GET /api/tickets
+
+List tickets.
+
+**Query Parameters:**
+- `flow_id=uuid` - Filter by flow
+- `cycle_id=uuid` - Filter by cycle
+- `assigned_to=uuid` - Filter by assignee
+- `status=open|in_progress|review|done`
+
+**Response (200):**
+```json
+{
+  "tickets": [
+    {
+      "id": "uuid",
+      "ticket_number": "TKT-001",
+      "title": "Create login form",
+      "status": "in_progress",
+      "priority": "high",
+      "story_points": 3,
+      "assignee": { "full_name": "Jane Doe" }
+    }
+  ]
+}
+```
+
+---
+
+### POST /api/tickets
+
+Create a new ticket.
+
+**Request Body:**
+```json
+{
+  "flow_id": "uuid",
+  "title": "Create login form",
+  "description": "Build React login component",
+  "ticket_type": "task",
+  "priority": "high",
+  "story_points": 3
+}
+```
+
+---
+
+### GET /api/tickets/[id]
+
+Get ticket with comments and time logs.
+
+---
+
+### PUT /api/tickets/[id]
+
+Update ticket.
+
+---
+
+### DELETE /api/tickets/[id]
+
+Delete ticket.
+
+---
+
+### POST /api/tickets/[id]/analyze
+
+AI-analyze ticket for implementation suggestions.
+
+---
+
+### GET /api/tickets/[id]/comments
+
+List ticket comments.
+
+---
+
+### POST /api/tickets/[id]/comments
+
+Add comment to ticket.
+
+**Request Body:**
+```json
+{
+  "content": "Started working on this",
+  "type": "comment"
+}
+```
+
+---
+
+### GET /api/tickets/[id]/time-logs
+
+List time logs for ticket.
+
+---
+
+### POST /api/tickets/[id]/time-logs
+
+Log time on ticket.
+
+**Request Body:**
+```json
+{
+  "hours": 2.5,
+  "description": "Implemented form validation",
+  "log_date": "2026-01-03"
+}
+```
 
 ---
 
@@ -526,10 +1140,11 @@ Remove member from domain.
 
 ### GET /api/resources
 
-List resources (optionally filtered by domain).
+List resources.
 
 **Query Parameters:**
 - `domain_id=uuid` - Filter by domain
+- `resource_type=web_app_project|mobile_app|api_service`
 
 **Response (200):**
 ```json
@@ -570,47 +1185,340 @@ Create a new resource.
 
 ---
 
-### GET /api/resources/{id}
+### GET /api/resources/[resourceId]
 
 Get resource with all attributes.
 
 ---
 
-### PUT /api/resources/{id}
+### PUT /api/resources/[resourceId]
 
-Update resource and attributes.
-
----
-
-### DELETE /api/resources/{id}
-
-Delete resource and all attributes.
+Update resource.
 
 ---
 
-## Flows
+### DELETE /api/resources/[resourceId]
 
-### GET /api/flows
+Delete resource.
 
-List flows (optionally filtered by domain or stage).
+---
 
-**Query Parameters:**
-- `domain_id=uuid` - Filter by domain
-- `quad_stage=Q|U|A|D` - Filter by stage
-- `assigned_to=uuid` - Filter by assignee
+### POST /api/resources/[resourceId]/analyze-repo
+
+Analyze connected Git repository.
+
+---
+
+### GET /api/resources/[resourceId]/analyze-repo
+
+Get repository analysis results.
+
+---
+
+### GET /api/resources/[resourceId]/attributes/git-repo
+
+Get Git repository attribute.
+
+---
+
+### POST /api/resources/[resourceId]/attributes/git-repo
+
+Set Git repository attribute.
+
+---
+
+### DELETE /api/resources/[resourceId]/attributes/git-repo
+
+Remove Git repository link.
+
+---
+
+### GET /api/resources/[resourceId]/attributes/blueprint
+
+Get project blueprint.
+
+---
+
+### POST /api/resources/[resourceId]/attributes/blueprint
+
+Generate/save project blueprint.
+
+---
+
+## AI & Chat
+
+### POST /api/ai/chat
+
+Send message to AI assistant.
+
+**Request Body:**
+```json
+{
+  "messages": [
+    { "role": "user", "content": "How do I implement authentication?" }
+  ],
+  "context": {
+    "domain_id": "uuid",
+    "resource_id": "uuid"
+  }
+}
+```
 
 **Response (200):**
 ```json
 {
-  "flows": [
+  "response": "To implement authentication, you should...",
+  "usage": { "prompt_tokens": 50, "completion_tokens": 200 }
+}
+```
+
+---
+
+### POST /api/ai/chat/stream
+
+Stream AI response.
+
+**Request Body:** Same as `/api/ai/chat`
+
+**Response:** Server-Sent Events stream
+
+---
+
+### GET /api/ai/credits
+
+Get AI credit balance and usage.
+
+**Response (200):**
+```json
+{
+  "balance": {
+    "total_credits": 10000,
+    "used_credits": 2500,
+    "remaining_credits": 7500
+  },
+  "tier": "growth",
+  "reset_date": "2026-02-01"
+}
+```
+
+---
+
+### POST /api/ai/credits
+
+Purchase/add AI credits.
+
+---
+
+### GET /api/ai/usage
+
+Get AI usage statistics.
+
+**Query Parameters:**
+- `period=day|week|month`
+
+---
+
+### GET /api/ai/ticket-chat
+
+Get ticket-specific chat history.
+
+---
+
+### POST /api/ai/ticket-chat
+
+Send message about specific ticket.
+
+---
+
+### POST /api/ai/ticket-chat/stream
+
+Stream ticket chat response.
+
+---
+
+### GET /api/ai/settings
+
+Get AI configuration settings.
+
+---
+
+### PATCH /api/ai/settings
+
+Update AI settings.
+
+---
+
+### GET /api/ai
+
+Get AI service status.
+
+---
+
+### POST /api/ai
+
+Generic AI completion endpoint.
+
+---
+
+### GET /api/ai-config
+
+Get organization AI configuration.
+
+---
+
+### PUT /api/ai-config
+
+Update organization AI configuration.
+
+---
+
+## Memory & Context
+
+### POST /api/memory/context
+
+Create new conversation context session.
+
+**Request Body:**
+```json
+{
+  "resource_id": "uuid",
+  "session_type": "planning",
+  "initial_context": { "goal": "Design auth system" }
+}
+```
+
+---
+
+### GET /api/memory/context/[sessionId]
+
+Get conversation context.
+
+---
+
+### POST /api/memory/context/[sessionId]
+
+Add to conversation context.
+
+---
+
+### PATCH /api/memory/context/[sessionId]
+
+Update context metadata.
+
+---
+
+### GET /api/memory/documents
+
+List memory documents (vector store).
+
+---
+
+### POST /api/memory/documents
+
+Add document to memory.
+
+**Request Body:**
+```json
+{
+  "content": "Document content for RAG",
+  "metadata": { "source": "confluence", "page": "auth-design" }
+}
+```
+
+---
+
+### GET /api/memory/templates
+
+List prompt templates.
+
+---
+
+### POST /api/memory/templates
+
+Create prompt template.
+
+---
+
+### GET /api/memory/analytics
+
+Get memory usage analytics.
+
+---
+
+## Git Integration
+
+### GET /api/integrations/git/providers
+
+List available Git providers.
+
+**Response (200):**
+```json
+{
+  "providers": [
+    { "id": "github", "name": "GitHub", "icon": "github" },
+    { "id": "gitlab", "name": "GitLab", "icon": "gitlab" },
+    { "id": "bitbucket", "name": "Bitbucket", "icon": "bitbucket" }
+  ]
+}
+```
+
+---
+
+### POST /api/integrations/git/[provider]/connect
+
+Start OAuth flow for Git provider.
+
+---
+
+### GET /api/integrations/git/[provider]/callback
+
+OAuth callback handler.
+
+---
+
+### POST /api/integrations/git/[provider]/disconnect
+
+Disconnect Git provider.
+
+---
+
+### GET /api/integrations/git/status
+
+Get Git integration status for organization.
+
+---
+
+### GET /api/integrations/git/repositories
+
+List connected repositories.
+
+---
+
+### POST /api/integrations/git/repositories
+
+Add repository to organization.
+
+---
+
+## Meeting Integration
+
+### GET /api/integrations/meeting/providers
+
+List available meeting providers.
+
+**Response (200):**
+```json
+{
+  "providers": [
     {
-      "id": "uuid",
-      "title": "Implement user authentication",
-      "quad_stage": "D",
-      "stage_status": "in_progress",
-      "priority": "high",
-      "assigned_to": "uuid",
-      "assignee": { "full_name": "Jane Doe" }
+      "id": "google_calendar",
+      "name": "Google Calendar",
+      "features": ["Calendar sync", "Google Meet"]
+    },
+    {
+      "id": "cal_com",
+      "name": "Cal.com",
+      "features": ["Webhook events", "API integration"]
     }
   ]
 }
@@ -618,122 +1526,418 @@ List flows (optionally filtered by domain or stage).
 
 ---
 
-### POST /api/flows
+### POST /api/integrations/meeting/[provider]/connect
 
-Create a new flow.
+Start OAuth flow for meeting provider.
 
-**Request Body:**
+---
+
+### GET /api/integrations/meeting/[provider]/callback
+
+OAuth callback handler.
+
+---
+
+### POST /api/integrations/meeting/[provider]/disconnect
+
+Disconnect meeting provider.
+
+---
+
+### POST /api/integrations/meeting/[provider]/webhook
+
+Webhook endpoint for meeting events.
+
+---
+
+### GET /api/integrations/meeting/status
+
+Get meeting integration status.
+
+---
+
+## Pull Requests
+
+### GET /api/pull-requests/[prId]/approvals
+
+List PR approvals.
+
+---
+
+### POST /api/pull-requests/[prId]/approvals
+
+Approve pull request.
+
+---
+
+### DELETE /api/pull-requests/[prId]/approvals
+
+Remove approval.
+
+---
+
+### GET /api/pull-requests/[prId]/reviewers
+
+List PR reviewers.
+
+---
+
+### POST /api/pull-requests/[prId]/reviewers
+
+Add reviewer.
+
+---
+
+### DELETE /api/pull-requests/[prId]/reviewers
+
+Remove reviewer.
+
+---
+
+### PATCH /api/pull-requests/[prId]/reviewers
+
+Update reviewer status.
+
+---
+
+## Dashboard & Analytics
+
+### GET /api/dashboard
+
+Get dashboard overview metrics.
+
+**Response (200):**
 ```json
 {
-  "domain_id": "uuid",
-  "title": "Implement user authentication",
-  "description": "Add login/logout functionality",
-  "flow_type": "feature",
-  "priority": "high",
-  "assigned_to": "uuid"
+  "metrics": {
+    "active_flows": 12,
+    "completed_this_week": 8,
+    "upcoming_deadlines": 3,
+    "team_velocity": 45
+  }
 }
 ```
 
 ---
 
-### GET /api/flows/{id}
+### GET /api/dashboard/velocity
 
-Get flow with stage history.
-
----
-
-### PUT /api/flows/{id}
-
-Update flow. Stage transitions are logged to history.
-
-**Request Body:**
-```json
-{
-  "quad_stage": "U",
-  "stage_status": "completed",
-  "change_reason": "Requirements clarified"
-}
-```
-
----
-
-### DELETE /api/flows/{id}
-
-Delete flow and history.
-
----
-
-## Circles
-
-### GET /api/circles
-
-List circles (optionally filtered by domain).
+Get velocity metrics over time.
 
 **Query Parameters:**
-- `domain_id=uuid` - Filter by domain
+- `cycles=5` - Number of cycles to include
 
 ---
 
-### POST /api/circles
+### GET /api/dashboard/team
 
-Create a new circle.
+Get team performance metrics.
 
-**Request Body:**
+---
+
+### GET /api/dashboard/cycles/[id]/burndown
+
+Get burndown chart data for cycle.
+
+---
+
+## Gamification
+
+### GET /api/gamification
+
+Get gamification data for user.
+
+**Response (200):**
 ```json
 {
-  "domain_id": "uuid",
-  "circle_number": 5,
-  "circle_name": "Security",
-  "lead_user_id": "uuid"
+  "points": {
+    "total": 1250,
+    "this_week": 150,
+    "rank": 3
+  },
+  "badges": [
+    { "id": "uuid", "name": "First Flow", "earned_at": "2026-01-01" }
+  ],
+  "streak": {
+    "current": 5,
+    "longest": 12
+  }
 }
 ```
 
 ---
 
-### GET /api/circles/{id}
+## Rankings
 
-Get circle with members.
+### GET /api/rankings
 
----
+Get leaderboard rankings.
 
-### PUT /api/circles/{id}
-
-Update circle.
-
----
-
-### DELETE /api/circles/{id}
-
-Delete circle and memberships.
+**Query Parameters:**
+- `period=week|month|all_time`
+- `domain_id=uuid`
 
 ---
 
-## Circle Members
+### POST /api/rankings
 
-### GET /api/circles/{id}/members
-
-List members of a circle.
+Update ranking configuration.
 
 ---
 
-### POST /api/circles/{id}/members
+### GET /api/rankings/config
 
-Add member to circle.
+Get ranking configuration.
+
+---
+
+### PUT /api/rankings/config
+
+Update ranking rules.
+
+---
+
+## Kudos
+
+### GET /api/kudos
+
+List kudos (peer recognition).
+
+**Query Parameters:**
+- `received_by=uuid` - Filter by recipient
+- `given_by=uuid` - Filter by sender
+
+---
+
+### POST /api/kudos
+
+Give kudos to colleague.
+
+**Request Body:**
+```json
+{
+  "to_user_id": "uuid",
+  "message": "Great work on the auth feature!",
+  "category": "collaboration"
+}
+```
+
+---
+
+## Training
+
+### GET /api/training
+
+List training modules.
+
+---
+
+### POST /api/training
+
+Create training module (admin).
+
+---
+
+### PUT /api/training/[id]/progress
+
+Update training progress.
+
+**Request Body:**
+```json
+{
+  "progress_percentage": 75,
+  "completed_sections": ["intro", "basics", "advanced"]
+}
+```
+
+---
+
+## Skills
+
+### GET /api/skills
+
+List skill definitions.
+
+---
+
+### POST /api/skills
+
+Create skill (admin).
+
+---
+
+### PUT /api/skills/[id]
+
+Update skill.
+
+---
+
+### DELETE /api/skills/[id]
+
+Delete skill.
+
+---
+
+## User Skills
+
+### GET /api/user-skills
+
+Get current user's skills.
+
+---
+
+### POST /api/user-skills
+
+Add skill to profile.
+
+**Request Body:**
+```json
+{
+  "skill_id": "uuid",
+  "proficiency_level": 3,
+  "years_experience": 2
+}
+```
+
+---
+
+### GET /api/user-skills/interests
+
+Get user's skill interests.
+
+---
+
+### PUT /api/user-skills/interests
+
+Set skill interests.
+
+---
+
+### PATCH /api/user-skills/interests
+
+Update skill interests.
+
+---
+
+## Skill Feedback
+
+### GET /api/skill-feedback
+
+Get feedback on skills.
+
+---
+
+### POST /api/skill-feedback
+
+Give skill feedback.
 
 **Request Body:**
 ```json
 {
   "user_id": "uuid",
-  "role": "member",
-  "allocation_pct": 100
+  "skill_id": "uuid",
+  "rating": 4,
+  "feedback": "Strong understanding of React hooks"
 }
 ```
 
 ---
 
-### DELETE /api/circles/{id}/members/{userId}
+### PATCH /api/skill-feedback
 
-Remove member from circle.
+Update feedback.
+
+---
+
+## Risks
+
+### GET /api/risks
+
+List project risks.
+
+**Query Parameters:**
+- `domain_id=uuid`
+- `status=open|mitigated|closed`
+
+---
+
+### POST /api/risks
+
+Create risk entry.
+
+**Request Body:**
+```json
+{
+  "title": "API Rate Limiting",
+  "description": "Third-party API may throttle requests",
+  "probability": "medium",
+  "impact": "high",
+  "mitigation_plan": "Implement caching layer"
+}
+```
+
+---
+
+### GET /api/risks/[id]
+
+Get risk details.
+
+---
+
+### PUT /api/risks/[id]
+
+Update risk.
+
+---
+
+### DELETE /api/risks/[id]
+
+Delete risk.
+
+---
+
+## Database Operations
+
+### GET /api/database-operations
+
+List database operations (A-stage).
+
+**Query Parameters:**
+- `status=pending|approved|completed|rejected`
+
+---
+
+### POST /api/database-operations
+
+Create database operation request.
+
+**Request Body:**
+```json
+{
+  "operation_type": "schema_migration",
+  "description": "Add user preferences table",
+  "sql_script": "CREATE TABLE user_preferences (...)",
+  "target_environment": "production"
+}
+```
+
+---
+
+### GET /api/database-operations/[id]
+
+Get operation details.
+
+---
+
+### PATCH /api/database-operations/[id]
+
+Update operation (approve/reject).
+
+---
+
+### DELETE /api/database-operations/[id]
+
+Delete operation.
 
 ---
 
@@ -741,13 +1945,19 @@ Remove member from circle.
 
 ### GET /api/adoption-matrix
 
-List all adoption matrices in organization.
+List all adoption matrices.
 
 ---
 
-### GET /api/adoption-matrix/{userId}
+### PUT /api/adoption-matrix
 
-Get adoption matrix for specific user.
+Bulk update adoption levels.
+
+---
+
+### GET /api/adoption-matrix/[userId]
+
+Get adoption matrix for user.
 
 **Response (200):**
 ```json
@@ -766,69 +1976,22 @@ Get adoption matrix for specific user.
 
 ---
 
-### PUT /api/adoption-matrix/{userId}
-
-Update adoption matrix levels.
-
-**Request Body:**
-```json
-{
-  "skill_level": 3,
-  "trust_level": 2,
-  "notes": "Completed AI training course"
-}
-```
-
----
-
-## Work Sessions
-
-### GET /api/work-sessions
-
-List work sessions (filtered by user and date range).
-
-**Query Parameters:**
-- `user_id=uuid` - Filter by user
-- `start_date=2026-01-01` - Start of date range
-- `end_date=2026-01-31` - End of date range
-
----
-
-### POST /api/work-sessions
-
-Log a work session.
-
-**Request Body:**
-```json
-{
-  "session_date": "2026-01-01",
-  "hours_worked": 8,
-  "is_workday": true,
-  "start_time": "09:00",
-  "end_time": "17:00",
-  "deep_work_pct": 60,
-  "meeting_hours": 2
-}
-```
-
----
-
-## Workload Metrics
+## Workload
 
 ### GET /api/workload
 
-List workload metrics (filtered by user and period).
+Get workload metrics.
 
 **Query Parameters:**
-- `user_id=uuid` - Filter by user
-- `domain_id=uuid` - Filter by domain
+- `user_id=uuid`
+- `domain_id=uuid`
 - `period_type=week|month|quarter`
 
 ---
 
 ### POST /api/workload
 
-Create workload metric entry.
+Create workload entry.
 
 **Request Body:**
 ```json
@@ -841,18 +2004,265 @@ Create workload metric entry.
   "assignments": 5,
   "completes": 4,
   "hours_worked": 40,
-  "root_cause": "blocked_dependency",
-  "root_cause_notes": "Waiting on API team"
+  "root_cause": "blocked_dependency"
 }
 ```
 
-**Root Cause Values:**
-- `blocked_dependency` - Waiting on external team
-- `scope_creep` - Requirements expanded
-- `technical_debt` - Legacy code issues
-- `understaffed` - Not enough developers
-- `overcommitted` - Too many assignments
-- `null` - No issues
+**Root Cause Values:** `blocked_dependency`, `scope_creep`, `technical_debt`, `understaffed`, `overcommitted`, `null`
+
+---
+
+## Work Sessions
+
+### GET /api/work-sessions
+
+List work sessions.
+
+**Query Parameters:**
+- `user_id=uuid`
+- `start_date=2026-01-01`
+- `end_date=2026-01-31`
+
+---
+
+### POST /api/work-sessions
+
+Log work session.
+
+**Request Body:**
+```json
+{
+  "session_date": "2026-01-03",
+  "hours_worked": 8,
+  "is_workday": true,
+  "start_time": "09:00",
+  "end_time": "17:00",
+  "deep_work_pct": 60,
+  "meeting_hours": 2
+}
+```
+
+---
+
+## Blueprint Agent
+
+### POST /api/blueprint-agent/start-interview
+
+Start blueprint discovery interview.
+
+**Request Body:**
+```json
+{
+  "resource_id": "uuid",
+  "interview_type": "new_project"
+}
+```
+
+---
+
+### POST /api/blueprint-agent/submit-answer
+
+Submit answer to interview question.
+
+**Request Body:**
+```json
+{
+  "session_id": "uuid",
+  "question_id": "uuid",
+  "answer": "We want to use Next.js with TypeScript"
+}
+```
+
+---
+
+## Book Generation
+
+### GET /api/book/database
+
+Get database documentation book.
+
+---
+
+### POST /api/book/database
+
+Generate database documentation.
+
+---
+
+### GET /api/book/nextjs
+
+Get Next.js documentation book.
+
+---
+
+### POST /api/book/nextjs
+
+Generate Next.js documentation.
+
+---
+
+### GET /api/book/download
+
+Download generated book.
+
+**Query Parameters:**
+- `format=pdf|markdown|html`
+
+---
+
+### POST /api/book/download
+
+Generate downloadable book.
+
+---
+
+## Admin & BYOK
+
+### GET /api/admin/byok
+
+Get BYOK (Bring Your Own Key) configuration overview.
+
+**Response (200):**
+```json
+{
+  "categories": [
+    { "id": "ai", "name": "AI Providers", "configured": true },
+    { "id": "git", "name": "Git Providers", "configured": true },
+    { "id": "meeting", "name": "Meeting Providers", "configured": false }
+  ]
+}
+```
+
+---
+
+### GET /api/admin/byok/[category]
+
+Get providers for category.
+
+---
+
+### PATCH /api/admin/byok/[category]
+
+Update category settings.
+
+---
+
+### GET /api/admin/byok/[category]/[provider]
+
+Get provider configuration.
+
+---
+
+### POST /api/admin/byok/[category]/[provider]
+
+Configure provider credentials.
+
+**Request Body:**
+```json
+{
+  "api_key": "sk-...",
+  "model": "gpt-4",
+  "endpoint": "https://api.openai.com/v1"
+}
+```
+
+---
+
+### DELETE /api/admin/byok/[category]/[provider]
+
+Remove provider configuration.
+
+---
+
+### GET /api/admin/ai-pool
+
+Get AI credit pool status.
+
+---
+
+## Setup
+
+### GET /api/setup/status
+
+Get organization setup status.
+
+**Response (200):**
+```json
+{
+  "setup": {
+    "meeting_provider_configured": true,
+    "calendar_connected": true,
+    "ai_tier_selected": true,
+    "first_domain_created": true,
+    "setup_completed_at": "2026-01-01"
+  }
+}
+```
+
+---
+
+### GET /api/setup/check
+
+Quick check if setup is complete (for middleware).
+
+**Response (200):**
+```json
+{
+  "complete": true
+}
+```
+
+---
+
+## Codebase
+
+### GET /api/codebase/search
+
+Search codebase index.
+
+**Query Parameters:**
+- `q=authentication` - Search query
+- `file_type=ts|tsx|js`
+
+---
+
+### POST /api/codebase/search
+
+Advanced codebase search.
+
+---
+
+### GET /api/codebase-index
+
+Get codebase index status.
+
+---
+
+## Meetings
+
+### GET /api/meetings/[id]/mom
+
+Get meeting minutes (MoM).
+
+---
+
+### POST /api/meetings/[id]/mom
+
+Generate meeting minutes from transcript.
+
+---
+
+### PATCH /api/meetings/[id]/mom
+
+Update meeting minutes.
+
+---
+
+## Tools
+
+### POST /api/tools/request
+
+Execute tool request (internal).
 
 ---
 
@@ -862,7 +2272,11 @@ Create workload metric entry.
 
 ```json
 {
-  "error": "role_code and role_name are required"
+  "error": "Validation failed",
+  "details": {
+    "email": "Invalid email format",
+    "name": "Name is required"
+  }
 }
 ```
 
@@ -870,7 +2284,8 @@ Create workload metric entry.
 
 ```json
 {
-  "error": "Unauthorized"
+  "error": "Unauthorized",
+  "message": "Invalid or expired token"
 }
 ```
 
@@ -878,7 +2293,8 @@ Create workload metric entry.
 
 ```json
 {
-  "error": "Forbidden - Admin access required"
+  "error": "Forbidden",
+  "message": "Admin access required"
 }
 ```
 
@@ -886,7 +2302,8 @@ Create workload metric entry.
 
 ```json
 {
-  "error": "Role not found"
+  "error": "Not found",
+  "message": "Resource with ID xxx not found"
 }
 ```
 
@@ -894,7 +2311,17 @@ Create workload metric entry.
 
 ```json
 {
-  "error": "Role code 'DEVELOPER' already exists"
+  "error": "Conflict",
+  "message": "Email already exists"
+}
+```
+
+### 500 Internal Server Error
+
+```json
+{
+  "error": "Internal server error",
+  "message": "An unexpected error occurred"
 }
 ```
 
@@ -902,25 +2329,62 @@ Create workload metric entry.
 
 ## Rate Limiting
 
-Currently no rate limiting. Planned for O(n) and O(n²) modes:
-- O(1) Seed: 100 requests/minute
-- O(n) Growth: 1000 requests/minute
-- O(n²) Scale: Unlimited (client infrastructure)
+| Mode | Requests/Minute | Description |
+|------|-----------------|-------------|
+| O(1) Seed | 100 | Starter tier |
+| O(n) Growth | 1000 | Growth tier |
+| O(n²) Scale | Unlimited | Enterprise |
+
+Rate limit headers included in responses:
+- `X-RateLimit-Limit`: Max requests per window
+- `X-RateLimit-Remaining`: Requests remaining
+- `X-RateLimit-Reset`: Window reset timestamp
 
 ---
 
-## Webhooks (Planned)
+**API Routes Summary:**
 
-Future endpoint for integrations:
-- `POST /api/webhooks` - Register webhook
-- `GET /api/webhooks` - List webhooks
-- `DELETE /api/webhooks/{id}` - Remove webhook
-
-**Events:**
-- `flow.stage_changed`
-- `user.adoption_updated`
-- `domain.created`
+| Category | Routes | Status |
+|----------|--------|--------|
+| Authentication | 11 | ✅ Implemented |
+| Organizations | 7 | ✅ Implemented |
+| Users | 5 | ✅ Implemented |
+| Roles | 6 | ✅ Implemented |
+| Domains | 10 | ✅ Implemented |
+| Circles | 7 | ✅ Implemented |
+| Flows | 8 | ✅ Implemented |
+| Cycles | 5 | ✅ Implemented |
+| Requirements | 6 | ✅ Implemented |
+| Tickets | 9 | ✅ Implemented |
+| Resources | 10 | ✅ Implemented |
+| AI & Chat | 12 | ✅ Implemented |
+| Memory & Context | 7 | ✅ Implemented |
+| Git Integration | 7 | ✅ Implemented |
+| Meeting Integration | 6 | ✅ Implemented |
+| Pull Requests | 7 | ✅ Implemented |
+| Dashboard | 4 | ✅ Implemented |
+| Gamification | 1 | ✅ Implemented |
+| Rankings | 4 | ✅ Implemented |
+| Kudos | 2 | ✅ Implemented |
+| Training | 3 | ✅ Implemented |
+| Skills | 4 | ✅ Implemented |
+| User Skills | 5 | ✅ Implemented |
+| Skill Feedback | 3 | ✅ Implemented |
+| Risks | 5 | ✅ Implemented |
+| Database Operations | 5 | ✅ Implemented |
+| Adoption Matrix | 3 | ✅ Implemented |
+| Workload | 2 | ✅ Implemented |
+| Work Sessions | 2 | ✅ Implemented |
+| Blueprint Agent | 2 | ✅ Implemented |
+| Book Generation | 6 | ✅ Implemented |
+| Admin & BYOK | 6 | ✅ Implemented |
+| Setup | 2 | ✅ Implemented |
+| Codebase | 3 | ✅ Implemented |
+| Meetings | 3 | ✅ Implemented |
+| Tools | 1 | ✅ Implemented |
+| **Total** | **~175 methods** | |
 
 ---
 
-**Last Updated:** January 1, 2026
+**Last Updated:** January 3, 2026
+**Version:** 2.0

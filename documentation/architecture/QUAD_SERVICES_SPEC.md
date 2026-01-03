@@ -1007,17 +1007,218 @@ export default defineConfig({
 
 ---
 
-## Next Steps
+## 13. VS Code Plugin API Integration
 
-1. ✅ Document structure (this file)
-2. [ ] Create GitHub repo `quadframework-services`
-3. [ ] Scaffold package with tsup
-4. [ ] Migrate existing lib/services/ code
-5. [ ] Add AI provider implementations
-6. [ ] Add memory service
-7. [ ] Add tests
-8. [ ] Publish to npm
+### Design Principle: Single Source of Truth
+
+**CRITICAL:** Business logic lives ONLY in `@quad/services`. The VS Code extension calls these services through REST API endpoints.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         QUAD Architecture (Final)                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────────┐           ┌─────────────────────────────────┐    │
+│   │   VS Code Plugin    │           │        QUAD Web App             │    │
+│   │                     │           │                                 │    │
+│   │  • Doc Generation   │ ──REST──▶ │  /api/services/docs            │    │
+│   │  • Code Analysis    │ ──REST──▶ │  /api/services/codebase        │    │
+│   │  • AI Chat          │ ──REST──▶ │  /api/services/ai              │    │
+│   │  • Ticket Update    │ ──REST──▶ │  /api/services/tickets         │    │
+│   └─────────────────────┘           └───────────────┬─────────────────┘    │
+│                                                     │                       │
+│                                                     ▼                       │
+│                              ┌──────────────────────────────────┐           │
+│                              │         @quad/services           │           │
+│                              │    (Single Business Logic)       │           │
+│                              │                                  │           │
+│                              │  • DocumentationService          │           │
+│                              │  • CodebaseIndexer               │           │
+│                              │  • AIRouter                      │           │
+│                              │  • TicketService                 │           │
+│                              │  • MemoryService                 │           │
+│                              └──────────────────────────────────┘           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### API Endpoints for VS Code Plugin
+
+The QUAD Web App exposes these REST endpoints for the VS Code extension:
+
+```typescript
+// quadframework/src/app/api/services/docs/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { DocumentationService } from '@quad/services';
+import { getSession } from '@/lib/auth';
+
+/**
+ * POST /api/services/docs/generate
+ *
+ * VS Code Plugin calls this to generate documentation.
+ * Business logic is in @quad/services, NOT duplicated.
+ */
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { type, code, language, projectPath } = await request.json();
+
+  // Use centralized service - NO business logic here
+  const docService = new DocumentationService(getAIRouter(session.orgId));
+
+  const result = await docService.generate({
+    type,
+    input: { code, projectPath },
+    options: { format: 'markdown' }
+  });
+
+  return NextResponse.json({ documentation: result });
+}
+```
+
+### VS Code Plugin Endpoints
+
+| Endpoint | Method | Purpose | Used By |
+|----------|--------|---------|---------|
+| `/api/services/docs/generate` | POST | Generate documentation | VS Code "Generate Docs" command |
+| `/api/services/docs/jsdoc` | POST | Generate JSDoc for code | VS Code "Add JSDoc" command |
+| `/api/services/docs/readme` | POST | Generate README | VS Code "Generate README" command |
+| `/api/services/codebase/index` | POST | Index repository | VS Code on project open |
+| `/api/services/codebase/search` | GET | Search codebase | VS Code "Search Code" command |
+| `/api/services/ai/chat` | POST | AI chat (streaming) | VS Code Chat Panel |
+| `/api/services/ai/explain` | POST | Explain code | VS Code "Explain Code" command |
+| `/api/services/tickets/update` | PATCH | Update ticket status | VS Code Ticket Panel |
+| `/api/services/tickets/chat` | POST | Ticket-specific AI chat | VS Code Ticket Chat |
+
+### Why Not Duplicate Logic?
+
+**Problem with duplication:**
+```
+BAD: Business logic in TWO places
+
+VS Code Plugin:                    Web App:
+┌────────────────────┐            ┌────────────────────┐
+│ function generateDocs() {       │ function generateDocs() {
+│   // Parse code                 │   // Parse code       <- DUPLICATE
+│   // Call AI                    │   // Call AI          <- DUPLICATE
+│   // Format result              │   // Format result    <- DUPLICATE
+│ }                               │ }
+└────────────────────┘            └────────────────────┘
+
+When logic changes, BOTH must be updated!
+```
+
+**Solution with centralized services:**
+```
+GOOD: Business logic in ONE place
+
+VS Code Plugin:                    Web App:
+┌────────────────────┐            ┌────────────────────┐
+│ // Just calls API               │ // Uses same service
+│ await fetch('/api/docs')        │ docService.generate()
+└──────────┬─────────┘            └──────────┬─────────┘
+           │                                 │
+           └───────────────┬─────────────────┘
+                           ▼
+           ┌──────────────────────────────┐
+           │ @quad/services               │
+           │ DocumentationService         │
+           │   - All business logic HERE  │
+           └──────────────────────────────┘
+```
+
+### VS Code Plugin Architecture
+
+```typescript
+// quad-vscode/src/services/api-client.ts
+
+export class QuadAPIClient {
+  private baseUrl: string;
+  private authToken: string;
+
+  constructor(config: { baseUrl: string; authToken: string }) {
+    this.baseUrl = config.baseUrl;
+    this.authToken = config.authToken;
+  }
+
+  // Documentation
+  async generateDocs(code: string, language: string): Promise<string> {
+    const response = await fetch(`${this.baseUrl}/api/services/docs/generate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ type: 'jsdoc', code, language }),
+    });
+    const data = await response.json();
+    return data.documentation;
+  }
+
+  // AI Chat (streaming)
+  async *chatStream(messages: Message[]): AsyncGenerator<string> {
+    const response = await fetch(`${this.baseUrl}/api/services/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages, stream: true }),
+    });
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    while (reader) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield decoder.decode(value);
+    }
+  }
+
+  // Codebase indexing
+  async indexCodebase(projectPath: string): Promise<void> {
+    await fetch(`${this.baseUrl}/api/services/codebase/index`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ projectPath }),
+    });
+  }
+}
+```
+
+### Implementation Priority
+
+| Phase | Feature | Endpoint | Priority |
+|-------|---------|----------|----------|
+| 1 | Doc Generation | `/api/services/docs/generate` | HIGH |
+| 1 | AI Chat | `/api/services/ai/chat` | HIGH |
+| 2 | Codebase Index | `/api/services/codebase/index` | MEDIUM |
+| 2 | Code Explanation | `/api/services/ai/explain` | MEDIUM |
+| 3 | Ticket Integration | `/api/services/tickets/*` | LOW |
+| 3 | Memory Context | `/api/services/memory/*` | LOW |
 
 ---
 
-*This services package is the foundation for QUAD's multi-platform strategy.*
+## Next Steps
+
+1. ✅ Document structure (this file)
+2. ✅ Define VS Code Plugin API integration
+3. [ ] Create GitHub repo `quadframework-services`
+4. [ ] Scaffold package with tsup
+5. [ ] Migrate existing lib/services/ code
+6. [ ] Add AI provider implementations
+7. [ ] Create API routes in Web App
+8. [ ] Implement VS Code extension API client
+9. [ ] Add memory service
+10. [ ] Add tests
+11. [ ] Publish to npm
+
+---
+
+*This services package is the foundation for QUAD's multi-platform strategy. Business logic is centralized in `@quad/services`, called by both Web App (directly) and VS Code Plugin (via REST API).*
