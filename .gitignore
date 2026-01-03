@@ -43,3 +43,6 @@ next-env.d.ts
 .env.deploy
 
 /src/generated/prisma
+
+# Deprecated - quad-services-ts replaced by quad-services (Java)
+quad-services-ts/
