@@ -4014,3 +4014,82 @@ model QUAD_ai_credit_transactions {
   @@index([created_at])
   @@map("QUAD_ai_credit_transactions")
 }
+
+// ============================================================================
+// PLATFORM CREDIT POOL - Tracks overall credit economy across ALL users
+// ============================================================================
+
+// Platform-wide credit pool tracking
+// Unused credits from paying users fund free tier for new users
+model QUAD_platform_credit_pool {
+  id                      String @id @default("platform_pool")
+
+  // Revenue: Total from all user purchases
+  total_purchased_cents   Int @default(0)  // Sum of all org purchases ever
+
+  // Consumption: Actual AI API costs incurred
+  total_consumed_cents    Int @default(0)  // Actual tokens used → real cost
+
+  // Breakage: Credits that expired unused (our profit margin)
+  total_expired_cents     Int @default(0)  // Credits expired without use
+  breakage_rate_percent   Float @default(0) // Historical avg: ~40% typical
+
+  // Free tier subsidy: How we fund new user free credits
+  free_tier_allocated_cents Int @default(0) // Total given to free users
+  free_tier_consumed_cents  Int @default(0) // Actually used by free users
+
+  // Pool health metrics
+  pool_balance_cents      Int @default(0)  // Available for free tier funding
+  runway_days             Int @default(0)  // How many days can we fund free tier
+
+  // Active counts
+  paying_orgs_count       Int @default(0)  // Orgs with tier != 'free'
+  free_orgs_count         Int @default(0)  // Orgs on free tier
+  byok_orgs_count         Int @default(0)  // Orgs using own API keys
+
+  // Monthly metrics (reset each month)
+  month_start             DateTime @default(now())
+  month_purchased_cents   Int @default(0)
+  month_consumed_cents    Int @default(0)
+  month_expired_cents     Int @default(0)
+  month_free_allocated    Int @default(0)
+
+  // Alerts
+  pool_low_alert_sent     Boolean @default(false) // Alert if pool < 30 days runway
+
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
+
+  @@map("QUAD_platform_credit_pool")
+}
+
+// Individual transactions that affect the platform pool
+model QUAD_platform_pool_transactions {
+  id                String   @id @default(uuid()) @db.Uuid
+
+  // What happened
+  transaction_type  String   @db.VarChar(50) // purchase, consumption, expiry, free_grant, free_usage
+
+  // Which org triggered this (for audit)
+  org_id            String?  @db.Uuid
+  org_name          String?  @db.VarChar(255)
+
+  // Amount (positive = pool grows, negative = pool shrinks)
+  amount_cents      Int
+
+  // Running balance after this transaction
+  pool_balance_after Int
+
+  // Details
+  description       String?  @db.VarChar(500)
+
+  // For consumption: link to specific usage
+  usage_transaction_id String? @db.Uuid
+
+  created_at        DateTime @default(now())
+
+  @@index([transaction_type])
+  @@index([org_id])
+  @@index([created_at])
+  @@map("QUAD_platform_pool_transactions")
+}

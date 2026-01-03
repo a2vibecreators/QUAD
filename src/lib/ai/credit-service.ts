@@ -13,6 +13,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { TOKEN_PRICING } from '@/lib/ai/providers';
+import { recordConsumption, recordFreeTierUsage, grantFreeTierCredits } from '@/lib/ai/platform-pool';
 
 // Free tier: $5.00 = 500 cents
 const FREE_TIER_CREDITS_CENTS = 500;
@@ -36,7 +37,7 @@ export function tokensToCents(
 
 /**
  * Get or create credit balance for an org
- * New orgs get FREE_TIER_CREDITS_CENTS ($5.00) to start
+ * New orgs get FREE_TIER_CREDITS_CENTS ($5.00) to start - funded by platform pool
  */
 export async function getOrCreateBalance(orgId: string) {
   let balance = await prisma.qUAD_ai_credit_balances.findUnique({
@@ -50,30 +51,44 @@ export async function getOrCreateBalance(orgId: string) {
     periodEnd.setDate(1);
     periodEnd.setHours(0, 0, 0, 0);
 
+    // Get org name for platform pool tracking
+    const org = await prisma.qUAD_organizations.findUnique({
+      where: { id: orgId },
+      select: { name: true },
+    });
+    const orgName = org?.name || 'Unknown Org';
+
+    // Request free tier credits from platform pool
+    const poolGrant = await grantFreeTierCredits(orgId, orgName);
+
+    const grantAmount = poolGrant.granted ? poolGrant.amountCents : 0;
+
     balance = await prisma.qUAD_ai_credit_balances.create({
       data: {
         org_id: orgId,
-        credits_purchased_cents: FREE_TIER_CREDITS_CENTS,
-        credits_remaining_cents: FREE_TIER_CREDITS_CENTS,
+        credits_purchased_cents: grantAmount,
+        credits_remaining_cents: grantAmount,
         billing_period_start: now,
         billing_period_end: periodEnd,
-        period_credits_limit: FREE_TIER_CREDITS_CENTS,
+        period_credits_limit: grantAmount,
         tier_name: 'free',
         tier_monthly_usd: 0,
       },
     });
 
     // Record the free tier credit grant
-    await prisma.qUAD_ai_credit_transactions.create({
-      data: {
-        balance_id: balance.id,
-        org_id: orgId,
-        transaction_type: 'bonus',
-        amount_cents: FREE_TIER_CREDITS_CENTS,
-        balance_after_cents: FREE_TIER_CREDITS_CENTS,
-        description: 'Welcome bonus: $5.00 free credits',
-      },
-    });
+    if (grantAmount > 0) {
+      await prisma.qUAD_ai_credit_transactions.create({
+        data: {
+          balance_id: balance.id,
+          org_id: orgId,
+          transaction_type: 'bonus',
+          amount_cents: grantAmount,
+          balance_after_cents: grantAmount,
+          description: `Welcome bonus: $${(grantAmount / 100).toFixed(2)} free credits (funded by platform pool)`,
+        },
+      });
+    }
   }
 
   return balance;
@@ -203,6 +218,15 @@ export async function deductCredits(
       user_id: userId,
     },
   });
+
+  // Record consumption to platform pool (for reconciliation with Claude billing)
+  // This tracks total AI costs across all users
+  await recordConsumption(orgId, costCents);
+
+  // If this is a free tier org, also track free tier usage
+  if (balance.tier_name === 'free') {
+    await recordFreeTierUsage(orgId, costCents);
+  }
 
   // Check if we need to send alerts
   const creditPercent = (updatedBalance.credits_remaining_cents / balance.period_credits_limit) * 100;
