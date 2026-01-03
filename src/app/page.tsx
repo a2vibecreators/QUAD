@@ -880,13 +880,13 @@ export default function Home() {
               href="/auth/signup"
               className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-bold text-lg transition-all hover:scale-105 shadow-lg"
             >
-              Get Started Free →
+              Sign Up Free →
             </Link>
             <Link
-              href="/concept"
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+              href="/auth/login"
+              className="px-6 py-4 bg-slate-700/50 text-white rounded-lg hover:bg-slate-600/50 transition-colors font-semibold border border-slate-600"
             >
-              Read the Concept
+              Sign In
             </Link>
             <Link
               href="/case-study"

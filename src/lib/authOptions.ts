@@ -154,9 +154,18 @@ export const authOptions: NextAuthOptions = {
           );
           return true;
         } else {
-          // No organization found - redirect to signup
-          console.log(`Sign-in rejected: No organization found for ${user.email}`);
-          return '/auth/signup?reason=no-company&email=' + encodeURIComponent(user.email);
+          // No organization found - redirect to signup with OAuth data
+          // User is already verified by Google/GitHub, so skip OTP
+          console.log(`New OAuth user: ${user.email} via ${account.provider} - redirecting to signup`);
+          const params = new URLSearchParams({
+            oauth: 'true',
+            provider: account.provider,
+            email: user.email || '',
+            name: user.name || '',
+          });
+          // Note: orgType will be read from sessionStorage on the client side
+          // since we can't access it from the server callback
+          return '/auth/signup?' + params.toString();
         }
 
       } catch (error) {

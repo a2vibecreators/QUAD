@@ -2,16 +2,21 @@
  * POST /api/auth/signup
  *
  * Create new organization and user account.
- * Supports both passwordless (startup/business) and password-based (legacy) signup.
+ * Supports three signup flows:
  *
- * Passwordless flow (orgType = startup | business):
- * 1. Create org and user (no password)
- * 2. Send OTP/magic link to email
- * 3. User verifies via /api/auth/verify-code
+ * 1. OAuth flow (isOAuth = true):
+ *    - User already verified via Google/GitHub
+ *    - Create org and user, mark email as verified
+ *    - Return success, frontend will complete OAuth signIn
  *
- * Password flow (legacy or orgType = null):
- * 1. Create org and user with password
- * 2. Return token directly
+ * 2. Passwordless flow (orgType = startup | business):
+ *    - Create org and user (no password)
+ *    - Send OTP/magic link to email
+ *    - User verifies via /api/auth/verify-code
+ *
+ * 3. Password flow (legacy or orgType = null):
+ *    - Create org and user with password
+ *    - Return token directly
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -31,7 +36,7 @@ function generateOTP(): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, fullName, companyName, orgType, password } = body;
+    const { email, fullName, companyName, orgType, password, isOAuth, oauthProvider, isEmailVerified } = body;
 
     // Validation
     if (!email) {
@@ -93,6 +98,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(finalPassword, 10);
 
     // Create user as OWNER
+    // OAuth users and email-verified users are already verified, others need OTP verification
     const user = await prisma.qUAD_users.create({
       data: {
         org_id: organization.id,
@@ -101,7 +107,7 @@ export async function POST(request: NextRequest) {
         role: 'OWNER',
         full_name: fullName || 'User',
         is_active: true,
-        email_verified: false, // Will be verified via OTP
+        email_verified: isOAuth === true || isEmailVerified === true, // OAuth and email-verified users are already verified
       },
     });
 
@@ -118,7 +124,72 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // For passwordless signup, generate and store OTP
+    // OAuth signup - user already verified via Google/GitHub
+    // Return success so frontend can complete OAuth signIn
+    if (isOAuth === true) {
+      console.log(`[OAuth Signup] Created org ${organization.id} for ${normalizedEmail} via ${oauthProvider}`);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Account created successfully via OAuth.',
+        isOAuth: true,
+        oauthProvider: oauthProvider,
+        data: {
+          organization: {
+            id: organization.id,
+            name: organization.name,
+          },
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            fullName: user.full_name,
+          },
+        },
+      }, { status: 201 });
+    }
+
+    // Email-verified signup - user already verified via OTP on login page
+    // Generate token and return directly (similar to password-based signup)
+    if (isEmailVerified === true) {
+      console.log(`[Email Verified Signup] Created org ${organization.id} for ${normalizedEmail}`);
+
+      const { generateToken, createSession } = await import('@/lib/auth');
+
+      const token = generateToken({
+        id: user.id,
+        org_id: organization.id,
+        email: user.email,
+        role: user.role,
+        full_name: user.full_name || '',
+        is_active: user.is_active,
+      });
+
+      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null;
+      const userAgent = request.headers.get('user-agent') || null;
+      await createSession(user.id, token, ipAddress, userAgent);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Account created successfully.',
+        autoLogin: true,
+        data: {
+          organization: {
+            id: organization.id,
+            name: organization.name,
+          },
+          user: {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            fullName: user.full_name,
+          },
+          token,
+        },
+      }, { status: 201 });
+    }
+
+    // For passwordless signup (non-OAuth), generate and store OTP
     if (isPasswordless) {
       const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
