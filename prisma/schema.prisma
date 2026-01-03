@@ -3747,3 +3747,167 @@ model QUAD_codebase_indexes {
   @@index([sync_status])
   @@map("QUAD_codebase_indexes")
 }
+
+// ============================================================================
+// AI CONVERSATIONS - Per-ticket chat history
+// ============================================================================
+
+// AI conversation threads (can be per ticket, per domain, or general)
+model QUAD_ai_conversations {
+  id        String   @id @default(uuid()) @db.Uuid
+  org_id    String   @map("company_id") @db.Uuid
+  user_id   String   @db.Uuid
+
+  // Scope - what is this conversation about?
+  scope_type  String  @db.VarChar(50) // ticket, domain, general, code_review
+  scope_id    String? @db.Uuid        // ticket_id, domain_id, or null for general
+
+  // Conversation metadata
+  title       String? @db.VarChar(255) // Auto-generated from first message
+  status      String  @default("active") @db.VarChar(50) // active, archived, resolved
+  total_messages Int  @default(0)
+  total_tokens_used Int @default(0)
+
+  // AI provider used (for cost tracking)
+  primary_provider String? @db.VarChar(50) // claude, openai, gemini, ollama
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  archived_at DateTime?
+
+  // Relations
+  messages QUAD_ai_messages[]
+
+  @@index([org_id])
+  @@index([user_id])
+  @@index([scope_type, scope_id])
+  @@index([status])
+  @@map("QUAD_ai_conversations")
+}
+
+// Individual messages in AI conversations
+model QUAD_ai_messages {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversation_id String   @db.Uuid
+
+  // Message content
+  role        String  @db.VarChar(20) // user, assistant, system
+  content     String
+  content_type String @default("text") @db.VarChar(50) // text, code, markdown, error
+
+  // Token tracking
+  tokens_used Int @default(0)
+
+  // AI provider that generated this (for assistant messages)
+  provider    String? @db.VarChar(50) // claude-sonnet, gpt-4, gemini-pro
+  model_id    String? @db.VarChar(100)
+  latency_ms  Int?    // Response time in milliseconds
+
+  // If AI suggested an action
+  suggestion_type   String? @db.VarChar(50) // create_ticket, update_status, assign_user
+  suggestion_data   Json?   // Action data to execute if approved
+  suggestion_status String? @db.VarChar(50) // pending, approved, rejected, executed
+
+  // If AI requested more info (iterative calls)
+  needs_more_info   Boolean @default(false)
+  requested_context String? // What additional context AI asked for
+
+  // RAG: Embedding for semantic search (Phase 2)
+  embedding         Json?   // Vector for similarity search
+  embedding_model   String? @db.VarChar(50) // text-embedding-3-small
+
+  created_at DateTime @default(now())
+
+  // Relations
+  conversation QUAD_ai_conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@index([role])
+  @@index([created_at])
+  @@map("QUAD_ai_messages")
+}
+
+// ============================================================================
+// AI USER MEMORIES - Cross-project RAG for user conversation history
+// ============================================================================
+
+// Stores summarized memories per user for quick RAG retrieval
+// User asks: "What did we discuss about auth?" → Search these summaries
+model QUAD_ai_user_memories {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @db.Uuid
+  org_id  String @map("company_id") @db.Uuid
+
+  // Memory content
+  memory_type   String  @db.VarChar(50) // topic, decision, blocker, action_item
+  summary       String  // "Discussed JWT auth implementation for login"
+  keywords      String[] // ["auth", "jwt", "login"] for keyword fallback
+
+  // Source reference (where was this discussed)
+  source_conversation_id String? @db.Uuid
+  source_message_id      String? @db.Uuid
+  source_ticket_id       String? @db.Uuid
+  source_domain_id       String? @db.Uuid
+  source_domain_name     String? @db.VarChar(255) // "QUAD Framework"
+
+  // RAG: Embedding for semantic search
+  embedding       Json?   // [0.123, -0.456, ...] vector
+  embedding_model String? @db.VarChar(50)
+
+  // Timestamps
+  discussed_at DateTime // When the original discussion happened
+  created_at   DateTime @default(now())
+
+  @@index([user_id])
+  @@index([org_id])
+  @@index([memory_type])
+  @@index([discussed_at])
+  @@index([source_domain_id])
+  @@map("QUAD_ai_user_memories")
+}
+
+// ============================================================================
+// AI ACTIVITY ROUTING - Choose AI provider based on task type
+// ============================================================================
+
+// Maps activity types to AI providers (org-configurable)
+model QUAD_ai_activity_routing {
+  id     String @id @default(uuid()) @db.Uuid
+  org_id String @map("company_id") @db.Uuid
+
+  // Activity definition
+  activity_type  String @db.VarChar(100) // ticket_question, code_analysis, translation, summarization
+  activity_name  String @db.VarChar(255) // Human-readable name
+  description    String?
+
+  // Provider selection
+  provider      String @db.VarChar(50)  // claude, openai, gemini, ollama, deepl
+  model_id      String @db.VarChar(100) // claude-3-sonnet, gpt-4-turbo, gemini-pro
+  fallback_provider String? @db.VarChar(50) // If primary fails
+
+  // Token/cost limits
+  max_tokens_input   Int @default(4000)
+  max_tokens_output  Int @default(2000)
+  cost_per_1k_input  Decimal? @db.Decimal(10, 6) // For cost tracking
+  cost_per_1k_output Decimal? @db.Decimal(10, 6)
+
+  // Rate limiting
+  requests_per_minute Int @default(60)
+  daily_budget_usd    Decimal? @db.Decimal(10, 2) // Stop if exceeded
+
+  // Behavior
+  temperature     Decimal @default(0.7) @db.Decimal(2, 1)
+  use_codebase_index Boolean @default(true) // Include codebase context?
+  require_approval   Boolean @default(false) // Need human approval for actions?
+
+  is_active  Boolean  @default(true)
+  priority   Int      @default(0) // Higher = prefer this route
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([org_id, activity_type])
+  @@index([org_id])
+  @@index([activity_type])
+  @@index([is_active])
+  @@map("QUAD_ai_activity_routing")
+}
