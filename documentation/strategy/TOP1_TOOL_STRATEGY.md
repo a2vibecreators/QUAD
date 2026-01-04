@@ -66,7 +66,56 @@
 
 ---
 
+## Trigger Types (How QUAD Gets Activated)
+
+QUAD can be triggered from ANYWHERE:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    QUAD TRIGGER SOURCES                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  1. WEB UI (Primary)                                                 │
+│     └── User clicks "Create Ticket", "Start Work", etc.            │
+│                                                                      │
+│  2. MENTIONS (@QUAD)                                                 │
+│     ├── Slack: "@QUAD create ticket for this bug"                   │
+│     ├── Teams: "@QUAD what's the status?"                           │
+│     ├── Email: "To: quad@company.com - Please review PR #123"       │
+│     └── SMS: "@QUAD urgent - server down"                           │
+│                                                                      │
+│  3. MONITORING (Proactive)                                           │
+│     ├── "Watch this email inbox, alert me if error detected"        │
+│     ├── "Monitor this Slack channel for keywords"                   │
+│     ├── "Watch GitHub for failed workflows"                         │
+│     └── QUAD already knows context → can act autonomously           │
+│                                                                      │
+│  4. SCHEDULED                                                        │
+│     ├── Daily standup summary                                        │
+│     ├── Weekly sprint reports                                        │
+│     └── Reminder: "Ticket stale for 3 days"                         │
+│                                                                      │
+│  5. WEBHOOKS                                                         │
+│     ├── GitHub: PR created, merged, failed                          │
+│     ├── CI/CD: Build failed                                          │
+│     └── Third-party: Any webhook we configure                       │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight:** The trigger source doesn't matter. QUAD has the CONTEXT (ticket, domain, rules). It knows what to do.
+
+---
+
 ## Recommended Next Steps (Phase 1 Focus)
+
+### Priority: WEB FIRST (Not IDE)
+
+**Why Web First:**
+- Works on any device (phone, tablet, desktop)
+- No installation required
+- Easier to iterate
+- IDE plugin can come later (just API calls)
 
 ### Step 1: Backend Services (Java Spring Boot)
 
@@ -108,25 +157,31 @@ GitHub Webhook → QUAD Backend
 
 **Don't worry about GitLab, Bitbucket yet** - just make GitHub work perfectly.
 
-### Step 3: VS Code Plugin (Top 1 IDE)
+### Step 3: Web Dashboard (Primary Interface)
 
-**Focus on ONE experience:**
+**Web-first approach - works everywhere:**
 
 ```
-VS Code Extension
+Next.js Web App (quad-web)
     ↓
 ┌─────────────────────────────────────────┐
-│ Core Features (P1):                      │
-│ • Show assigned tickets in sidebar       │
-│ • "Start Work" → checkout branch, setup  │
-│ • AI chat (context-aware from ticket)    │
-│ • "Submit for Review" → create PR        │
+│ Phase 1 Features:                        │
+│ • Organization dashboard                 │
+│ • Ticket list with filters               │
+│ • "Start Work" → sandbox creation        │
+│ • AI chat panel (context-aware)          │
+│ • Create/edit tickets                    │
+│ • View AI usage and credits              │
 │                                          │
-│ DON'T BUILD YET:                         │
-│ • JetBrains, Vim, etc. (P3)             │
-│ • Complex dashboards (P2)                │
+│ Phase 2 Features:                        │
+│ • @QUAD mention handling UI              │
+│ • Monitoring configuration               │
+│ • Analytics dashboards                   │
+│ • Integration settings                   │
 └─────────────────────────────────────────┘
 ```
+
+**Why Web First:** Works on any device, no installation, easier to iterate.
 
 ### Step 4: AI Integration (Claude + Gemini)
 
@@ -166,47 +221,128 @@ QUAD tracks time, AI usage, files changed
 
 ---
 
+## Phase 2: Enhanced Features
+
+### VS Code Plugin (Phase 2)
+
+**Key Architecture: VS Code calls QUAD, NOT Claude directly**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    VS CODE PLUGIN                             │
+│                                                               │
+│  ❌ WRONG: VS Code → Claude API directly                     │
+│  ✅ RIGHT: VS Code → QUAD Backend → Claude/Gemini            │
+│                                                               │
+│  Why?                                                         │
+│  • QUAD has the context (ticket, rules, memory)              │
+│  • QUAD tracks AI credits                                     │
+│  • QUAD can route to different providers                      │
+│  • VS Code is just a thin client                              │
+│                                                               │
+│  Initial Plugin (P2.1):                                       │
+│  • Call QUAD HTTP APIs                                        │
+│  • Beautify markdown documents                                │
+│  • Show ticket info in sidebar                                │
+│                                                               │
+│  Enhanced Plugin (P2.2):                                      │
+│  • AI chat via QUAD API                                       │
+│  • Start Work / Submit PR flows                               │
+│  • Sandbox connection                                         │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Monitoring & Proactive Triggers (Phase 2)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                 QUAD MONITORING SYSTEM                        │
+│                                                               │
+│  User configures:                                             │
+│  "Watch this email inbox for error keywords"                  │
+│  "Monitor Slack #alerts channel"                              │
+│  "Call me if GitHub workflow fails"                           │
+│                                                               │
+│  QUAD already has:                                            │
+│  • Context of what "error" means for this project             │
+│  • Rules for how to respond                                   │
+│  • Knowledge of who to notify                                 │
+│                                                               │
+│  Flow:                                                        │
+│  1. QUAD polls/receives events                                │
+│  2. AI analyzes: "Is this an issue?"                          │
+│  3. If yes → take configured action                           │
+│     • Create ticket automatically                             │
+│     • Notify team via Slack/Email/SMS                         │
+│     • Call user (voice) for urgent issues                     │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## What We're NOT Doing in Phase 1
 
 | Feature | Why Defer |
 |---------|-----------|
 | Teams/Discord/WhatsApp | Slack is #1, others can wait |
 | GitLab/Bitbucket | GitHub is #1, others can wait |
-| JetBrains/Vim | VS Code is #1, others can wait |
+| JetBrains/Vim | VS Code plugin uses QUAD API, same code works |
 | OpenAI/AWS Bedrock | Claude + Gemini covers it |
 | Zoom/Teams meetings | Google Meet is simplest |
 | Complex analytics | Get core working first |
-| Voice assistant | Cool but not essential |
-| Mobile app | Web + IDE is enough |
+| Voice assistant | Cool but not essential for P1 |
+| Mobile app | Web works on mobile |
+| Monitoring/Proactive | P2 feature |
 
 ---
 
 ## Implementation Order
 
 ```
+PHASE 1: Core Platform (8 weeks)
+═══════════════════════════════
+
 Week 1-2: Backend Core
-├── Setup Spring Boot project
+├── Setup Spring Boot project (quad-services)
 ├── OrganizationService + tests
-├── UserService + auth
+├── UserService + auth (JWT)
 └── TicketService + basic CRUD
 
-Week 3-4: GitHub + AI
-├── GitHub webhook endpoint
+Week 3-4: Web Dashboard
+├── Next.js setup (quad-web)
+├── Auth pages (login, register)
+├── Organization dashboard
+├── Ticket list + create/edit
+└── Connect to backend APIs
+
+Week 5-6: AI Integration
 ├── AIOrchestrationService
-├── Claude integration
-└── Gemini integration
+├── Claude integration (coding tasks)
+├── Gemini Flash integration (Q&A)
+├── AI chat component in web
+└── Credit tracking
 
-Week 5-6: VS Code Plugin
-├── Extension scaffold
-├── Ticket list sidebar
-├── "Start Work" flow
-└── AI chat panel
-
-Week 7-8: Sandbox + Polish
-├── Docker sandbox creation
-├── VS Code Remote connection
+Week 7-8: GitHub + Polish
+├── GitHub webhook endpoint
+├── PR/commit event handling
 ├── End-to-end flow testing
-└── Web dashboard (basic)
+└── Deploy to production
+
+═══════════════════════════════
+PHASE 2: Extended Features (4+ weeks)
+═══════════════════════════════
+
+Week 9-10: VS Code Plugin
+├── Extension scaffold
+├── Call QUAD HTTP APIs
+├── Beautify markdown docs
+└── Ticket sidebar
+
+Week 11-12: Sandbox + Monitoring
+├── Docker sandbox creation
+├── @QUAD mention handling
+├── Basic monitoring setup
+└── Proactive notifications
 ```
 
 ---
