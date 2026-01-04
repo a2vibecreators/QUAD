@@ -35,12 +35,28 @@ User → Cloudflare DNS → Mac Studio (96.240.97.243) → Caddy (SSL) → Docke
 
 **QUAD Framework DNS Records:**
 
-| Subdomain | IP Address | Proxy | Port (via Caddy) | Container |
-|-----------|------------|-------|------------------|-----------|
-| dev.quadframe.work | 96.240.97.243 | ❌ Off | 14001 | quad-web-dev |
-| qa.quadframe.work | 96.240.97.243 | ❌ Off | 15001 | quad-web-qa |
-| dev-api.quadframe.work | 96.240.97.243 | ❌ Off | 14101 | quad-services-dev |
-| qa-api.quadframe.work | 96.240.97.243 | ❌ Off | 15101 | quad-services-qa |
+| Subdomain | IP Address | Proxy | Port (via Caddy) | Container | Purpose |
+|-----------|------------|-------|------------------|-----------|---------|
+| dev.quadframe.work | 96.240.97.243 | ❌ Off | 14001 | quad-web-dev | Web UI |
+| qa.quadframe.work | 96.240.97.243 | ❌ Off | 15001 | quad-web-qa | Web UI |
+| dev-api.quadframe.work | 96.240.97.243 | ❌ Off | 14301 | quad-api-dev | API Gateway (external clients) |
+| qa-api.quadframe.work | 96.240.97.243 | ❌ Off | 15301 | quad-api-qa | API Gateway (external clients) |
+| api.quadframe.work | GCP Cloud Run | ✅ On | - | quad-api-prod | API Gateway (PROD) |
+
+**API Architecture:**
+```
+VS Code Extension / External Clients
+           ↓
+    dev-api.quadframe.work (Caddy SSL)
+           ↓
+    quad-api-dev:3100 (API Gateway)
+           ↓
+    [Rate Limiting + API Key Auth + Whitelist]
+           ↓
+    quad-services-dev:8080 (Java Backend)
+           ↓
+    postgres-quad-dev:5432
+```
 
 **Key Points:**
 - Cloudflare proxy is **OFF** (DNS only)
@@ -415,7 +431,7 @@ quadframework/
 │   └── lib/                     # Utilities, Prisma client
 ├── prisma/                      # Database schema
 │   └── schema.prisma            # QUAD tables (QUAD_ prefix)
-├── quad-services/          # Java Spring Boot backend (NEW)
+├── quad-services/          # Java Spring Boot backend
 │   ├── src/main/java/com/quad/services/
 │   │   ├── ai/                  # AI providers (Claude, OpenAI, Gemini)
 │   │   ├── memory/              # Context retrieval service
@@ -423,7 +439,12 @@ quadframework/
 │   │   └── integrations/        # GitHub, Google Calendar
 │   ├── pom.xml                  # Maven config
 │   └── README.md                # Java service docs
-├── quad-services/               # TypeScript services (LEGACY - kept for reference)
+├── quad-api/                    # API Gateway for external clients (submodule)
+│   ├── src/
+│   │   ├── index.js             # Express server
+│   │   └── middleware/          # Auth, rate limiting, whitelist
+│   ├── Dockerfile               # API gateway container
+│   └── README.md                # API gateway docs
 ├── quad-vscode/                 # VS Code extension (submodule)
 ├── quad-database/               # Database migrations (submodule)
 ├── quad-ios/                    # iOS app (submodule - future)
@@ -698,15 +719,17 @@ export async function GET() {
 | Environment | Service | Container Name | Port | URL |
 |-------------|---------|----------------|------|-----|
 | DEV | Web | quad-web-dev | 14001 | https://dev.quadframe.work |
-| DEV | Java API | quad-services-dev | 14101 | https://dev-api.quadframe.work |
+| DEV | Java API (internal) | quad-services-dev | 14101 (8080) | http://quad-services-dev:8080 (Docker network only) |
 | DEV | Database | postgres-quad-dev | 14201 | localhost:14201 |
+| DEV | **API Gateway (external)** | quad-api-dev | 14301 | https://dev-api.quadframe.work |
 | QA | Web | quad-web-qa | 15001 | https://qa.quadframe.work |
-| QA | Java API | quad-services-qa | 15101 | https://qa-api.quadframe.work |
+| QA | Java API (internal) | quad-services-qa | 15101 (8080) | http://quad-services-qa:8080 (Docker network only) |
 | QA | Database | postgres-quad-qa | 15201 | localhost:15201 |
+| QA | **API Gateway (external)** | quad-api-qa | 15301 | https://qa-api.quadframe.work |
 
 **Port Allocation:**
-- QUAD DEV: 14xxx range (14001, 14101, 14201)
-- QUAD QA: 15xxx range (15001, 15101, 15201)
+- QUAD DEV: 14xxx range (14001 web, 14101 java, 14201 db, **14301 api-gateway**)
+- QUAD QA: 15xxx range (15001 web, 15101 java, 15201 db, **15301 api-gateway**)
 
 **Shared Services (used by QUAD):**
 - Vaultwarden: Port 10000 (shared by all projects)
@@ -729,12 +752,12 @@ qa.quadframe.work {
     reverse_proxy quad-web-qa:3000
 }
 
-# QUAD Java API
+# QUAD API Gateway (External)
 dev-api.quadframe.work {
-    reverse_proxy quad-services-dev:14101
+    reverse_proxy quad-api-dev:3100
 }
 qa-api.quadframe.work {
-    reverse_proxy quad-services-qa:15101
+    reverse_proxy quad-api-qa:3100
 }
 ```
 

@@ -16,3 +16,6 @@
 [submodule "quad-vscode"]
 	path = quad-vscode
 	url = git@github.com:a2vibecreators/QUAD-vscode.git
+[submodule "quad-api"]
+	path = quad-api
+	url = git@github.com:a2Vibes/quad-api.git
