@@ -239,18 +239,79 @@ QUAD tracks time, AI usage, files changed
 │  • QUAD tracks AI credits                                     │
 │  • QUAD can route to different providers                      │
 │  • VS Code is just a thin client                              │
-│                                                               │
-│  Initial Plugin (P2.1):                                       │
-│  • Call QUAD HTTP APIs                                        │
-│  • Beautify markdown documents                                │
-│  • Show ticket info in sidebar                                │
-│                                                               │
-│  Enhanced Plugin (P2.2):                                      │
-│  • AI chat via QUAD API                                       │
-│  • Start Work / Submit PR flows                               │
-│  • Sandbox connection                                         │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+**VS Code Menu Commands (One-Click Actions):**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  QUAD Menu (VS Code Command Palette / Right-click)           │
+├──────────────────────────────────────────────────────────────┤
+│                                                               │
+│  📋 My Tickets                                                │
+│     └── Shows list of assigned tickets                       │
+│                                                               │
+│  ▶️  QUAD-123: Start                                          │
+│     └── One click → QUAD executes required steps             │
+│         (Steps are defined in QUAD rules/templates)          │
+│         User just sees: "Ready to work on QUAD-123"          │
+│                                                               │
+│  📝 QUAD-123: Show Changes                                    │
+│     └── "Here's what QUAD has done:"                         │
+│         • Files modified: 3                                   │
+│         • Tests added: 2                                      │
+│         • Last suggestion: "Added error handling..."         │
+│                                                               │
+│  💬 QUAD-123: Ask                                             │
+│     └── Opens AI chat (context of this ticket)               │
+│                                                               │
+│  ✅ QUAD-123: Submit                                          │
+│     └── One click → QUAD executes submit steps               │
+│         (PR creation, reviewers - all from templates)        │
+│                                                               │
+│  🔄 Sync                                                      │
+│     └── Pull latest from QUAD                                │
+│                                                               │
+└──────────────────────────────────────────────────────────────┘
+
+Note: User just sees ticket number and action.
+      QUAD knows the required steps (documented in templates).
+      No need to show "checkout", "branch", etc.
+```
+
+**Sidebar Panel:**
+
+```
+┌─────────────────────────────────┐
+│  QUAD                      [⚙️] │
+├─────────────────────────────────┤
+│  Current Ticket: QUAD-123       │
+│  Status: In Progress            │
+│  Branch: feature/QUAD-123       │
+├─────────────────────────────────┤
+│  📁 Files Changed (3)           │
+│  ├── src/auth/login.ts          │
+│  ├── src/auth/login.test.ts     │
+│  └── src/utils/validate.ts      │
+├─────────────────────────────────┤
+│  🤖 QUAD Activity               │
+│  • Added input validation       │
+│  • Created unit tests           │
+│  • Suggested error handling     │
+├─────────────────────────────────┤
+│  [ Start Work ] [ Submit PR ]   │
+└─────────────────────────────────┘
+```
+
+**Implementation Phases:**
+
+| Phase | Features |
+|-------|----------|
+| P2.1 | My Tickets list, Basic sidebar, Beautify docs |
+| P2.2 | Start Work, Show Changes, Sync |
+| P2.3 | Ask QUAD (AI chat), Submit PR |
+| P2.4 | Full sandbox integration |
 
 ### Monitoring & Proactive Triggers (Phase 2)
 
