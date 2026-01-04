@@ -2,7 +2,7 @@
 
 **Purpose:** This document captures all valuable discussions, ideas, and suggestions from development sessions. It ensures no ideas are lost and serves as a reference for future implementation.
 
-**Last Updated:** January 3, 2026
+**Last Updated:** January 4, 2026
 **Maintainer:** Development Team + Claude AI Assistant
 
 ---
@@ -30,6 +30,10 @@
 19. [Proactive Agent Phone Workflow](#19-proactive-agent-phone-workflow-work-without-a-laptop)
 20. [Future Ideas Backlog](#20-future-ideas-backlog)
 21. [Documentation Integration Strategy](#21-documentation-integration-strategy)
+22. [January 4, 2026 Architecture Decisions](#22-january-4-2026-architecture-decisions)
+23. [QUAD Structured AI Learning Architecture](#23-quad-structured-ai-learning-architecture)
+24. [Messenger Channel Architecture](#24-messenger-channel-architecture)
+25. [Schema Naming Convention Detection](#25-schema-naming-convention-detection)
 
 ---
 
@@ -2065,6 +2069,605 @@ See: [DOCUMENTATION_INTEGRATION.md](../architecture/DOCUMENTATION_INTEGRATION.md
 
 ---
 
+## 22. January 4, 2026 Architecture Decisions
+
+**Date Discussed:** January 4, 2026
+**Status:** Confirmed - Ready for Implementation
+
+### Core Discussion Topics
+
+This session covered fundamental architecture decisions for QUAD Framework.
+
+### Confirmed Decisions (13 Total)
+
+| # | Topic | Decision | Rationale |
+|---|-------|----------|-----------|
+| 1 | **MCP Code Ownership** | QUAD team writes MCP tools, expose both MCP + REST | MCP native for Claude, REST for Gemini/OpenAI |
+| 2 | **Template Hierarchy** | Org (no override) → SubOrg (additions) → Circle | Mandatory rules at org level, additions allowed below |
+| 3 | **Config Storage** | Database (not local files) | Sandbox gets config at startup, accessible everywhere |
+| 4 | **Sandbox Architecture** | Container image (Docker), config from DB | Like AWS EC2 but containerized, ephemeral |
+| 5 | **Meeting Flow** | Meet → Transcript → Translate → MOM → BA Approve → Ticket Comment | Clear workflow for meeting-to-action |
+| 6 | **Sandbox Pool** | Per-org config, 5 default max, configurable timeouts | 30 min idle → STALE, 2 hr → TERMINATE |
+| 7 | **Feature Flags** | `is_active=false`, `is_deleted=false` = show as disabled | "Not available yet" tooltip on hover |
+| 8 | **Naming Conventions** | Project level (per domain) | Configurable via QUAD_org_rules table |
+| 9 | **Rules Versioning** | No version column, Git tracks history | Use `updated_at` and `updated_by` only |
+| 10 | **Circle Names** | Management, Development, QA, Infrastructure | Official names from static website |
+| 11 | **Rules Table Design** | One table (`QUAD_org_rules`), circle_type column with WHERE filter | Simpler than separate tables per circle |
+| 12 | **Rules Scope** | Same table for org/domain/user (nullable FKs, most specific wins) | Hierarchical resolution |
+| 13 | **Circle Naming** | Keep "Management" (not "Enabling") | Matches website, DB triggers, core_roles table |
+
+### QUAD Sandbox Environment
+
+**Question:** Does QUAD need its own Linux/Windows environment to support cloud operations from user's Git?
+
+**Answer:** YES - QUAD uses **ephemeral cloud sandboxes** (Docker containers running Linux).
+
+**What Sandboxes Do:**
+1. Clone user's Git repository
+2. Run builds (`mvn compile`, `npm install`)
+3. Run tests (`mvn test`, `npm test`)
+4. Execute AI-assisted code analysis
+5. Deploy to cloud environments
+
+**Architecture:**
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         QUAD Sandbox Pool                                │
+│                                                                          │
+│   User clicks "Start work on QUAD-123"                                   │
+│        ↓                                                                 │
+│   QUAD API creates sandbox request                                       │
+│        ↓                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │                    Sandbox Container                             │   │
+│   │                                                                  │   │
+│   │   Base Image: quad-sandbox:latest (Linux)                        │   │
+│   │   Includes: Git, Maven, npm, Node, Java 21, Python               │   │
+│   │                                                                  │   │
+│   │   Startup:                                                       │   │
+│   │   1. Pull config from QUAD database                              │   │
+│   │   2. git clone {user_repo} --branch {feature_branch}             │   │
+│   │   3. Run build command (mvn compile / npm install)               │   │
+│   │   4. Report status to QUAD API                                   │   │
+│   │   5. Wait for commands or timeout                                │   │
+│   │                                                                  │   │
+│   │   Lifecycle: 30 min idle → STALE, 2 hr → TERMINATE               │   │
+│   └─────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+│   Infrastructure Options:                                                │
+│   - GCP Cloud Run Jobs (recommended)                                     │
+│   - AWS Fargate                                                          │
+│   - Kubernetes (GKE/EKS)                                                 │
+│   - Local Docker (development)                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**See:** [SANDBOX_ARCHITECTURE.md](../architecture/SANDBOX_ARCHITECTURE.md) for full details.
+
+### QUAD Platform Infrastructure (Cloud Run vs EC2-like Instances)
+
+**Question:** Does QUAD (as an application on Cloud Run) need any EC2-like instances for its own activities?
+
+**Answer:** For Phase 1, **NO EC2 needed** - everything runs serverless. But some future features may need dedicated compute.
+
+**Phase 1 Infrastructure (Serverless - No EC2):**
+
+| Component | Service | Why Serverless Works |
+|-----------|---------|---------------------|
+| **QUAD API** | GCP Cloud Run | Stateless REST API, scales automatically |
+| **QUAD Web** | GCP Cloud Run | Static/SSR Next.js, CDN-friendly |
+| **QUAD Database** | GCP Cloud SQL | Managed PostgreSQL, auto-backups |
+| **Background Jobs** | Cloud Run Jobs | Async tasks (compaction, indexing) |
+| **File Storage** | GCS / S3 | Documents, screenshots, reports |
+| **Cache** | Redis (Cloud Memorystore) | Session cache, hot data |
+
+**Future Features That MAY Need EC2-like Instances:**
+
+| Feature | Why EC2/VM Might Be Needed | Alternative |
+|---------|---------------------------|-------------|
+| **Self-Hosted AI Models** | GPU required for Ollama, local LLMs | Use managed AI APIs instead |
+| **Browser IDE (Phase 2)** | Persistent connections, code-server | Cloud Run with WebSocket |
+| **Long-Running Builds** | Maven/npm builds > 15 min | Split into smaller jobs |
+| **Document Processing** | Heavy PDF/OCR workloads | Cloud Run Jobs with timeout extension |
+
+**Key Insight:**
+```
+QUAD Application (Cloud Run) ≠ Client Sandboxes
+
+Cloud Run:
+  - Runs QUAD's own code (API, web)
+  - Stateless, auto-scaling
+  - No fixed infrastructure cost
+
+Client Sandboxes:
+  - Runs CLIENT's code (git clone, mvn build)
+  - Ephemeral containers
+  - Charged per usage
+
+They are SEPARATE concerns.
+```
+
+**If GPU/Dedicated Compute is Ever Needed:**
+- Use GCP Compute Engine with GPU (on-demand)
+- Or AWS EC2 with GPU instances
+- Spin up for specific tasks, terminate when done
+- Same pattern as sandboxes but for QUAD internal use
+
+### AI Consumption Tracking Per Ticket
+
+**Requirement:** Track AI usage per ticket for billing and analytics.
+
+**Three-Layer Design:**
+
+| Table | Purpose | Retention |
+|-------|---------|-----------|
+| `QUAD_ticket_ai_sessions` | Session-level tracking | Until compaction |
+| `QUAD_ticket_ai_requests` | Request-level details + debug payloads | Until compaction |
+| `QUAD_ticket_ai_summary` | Compacted totals per ticket | Forever |
+
+**Debug Mode vs Production:**
+
+| Mode | Request Payload | Response Payload | Token Counts |
+|------|-----------------|------------------|--------------|
+| **Debug** | Stored (JSONB) | Stored (JSONB) | Stored |
+| **Production** | NULL | NULL | Stored |
+
+**Compaction Strategy:**
+1. When ticket moves to DONE → Aggregate all sessions
+2. Store totals in `QUAD_ticket_ai_summary`
+3. Set `raw_data_purged = true` after purging detail records
+4. Keep compacted summary forever for billing/analytics
+
+### MCP vs REST API Strategy
+
+**Question:** How do we support non-Claude AI providers?
+
+**Answer:** Dual-protocol approach.
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    QUAD Tool Server                                      │
+│                                                                          │
+│   ┌─────────────────────────────────────────────────────────────────┐   │
+│   │                     Tool Implementations                         │   │
+│   │                                                                  │   │
+│   │   quad_create_ticket()                                           │   │
+│   │   quad_get_ticket()                                              │   │
+│   │   quad_start_sandbox()                                           │   │
+│   │   quad_deploy()                                                  │   │
+│   │   ...                                                            │   │
+│   └───────────────────────────┬───────────────────────────────────────┘   │
+│                               │                                          │
+│               ┌───────────────┴───────────────┐                          │
+│               ▼                               ▼                          │
+│   ┌─────────────────────┐         ┌─────────────────────┐               │
+│   │    MCP Protocol     │         │    REST API         │               │
+│   │   (Claude native)   │         │   (All providers)   │               │
+│   │                     │         │                     │               │
+│   │   JSON-RPC over     │         │   /api/tools/*      │               │
+│   │   stdio/HTTP        │         │   OpenAPI spec      │               │
+│   └─────────────────────┘         └─────────────────────┘               │
+│               ▲                               ▲                          │
+│               │                               │                          │
+│           Claude                      Gemini, OpenAI, etc.               │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Database Tables Created
+
+| Table | Purpose | Location |
+|-------|---------|----------|
+| `QUAD_org_rules` | Org/domain/user rules with circle targeting | `sql/core/` |
+| `QUAD_ticket_ai_sessions` | AI session tracking per ticket | `sql/ai/` |
+| `QUAD_ticket_ai_requests` | Individual AI requests with debug payloads | `sql/ai/` |
+| `QUAD_ticket_ai_summary` | Compacted AI usage per ticket | `sql/ai/` |
+
+### Documentation Created
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| `HOW_CLAUDE_CODE_WORKS.md` | Claude Code architecture for QUAD implementation | `documentation/ai/` |
+| `MCP_AGENT_VS_USER_AGENTS.md` | Comparison of MCP agents vs slash commands | `documentation/agents/` |
+| `SANDBOX_ARCHITECTURE.md` | Ephemeral sandbox design | `documentation/architecture/` |
+| `AGENT_RULES.md` | 40 rules for AI agents | `documentation/agents/` |
+| `CODE_NAMING_CONVENTIONS.md` | Naming standards | `documentation/conventions/` |
+| `CONNECTIVITY_TYPES.md` | Integration types | `documentation/integration/` |
+
+---
+
+## 23. QUAD Structured AI Learning Architecture
+
+**Date Discussed:** January 4, 2026
+**Status:** Architecture Defined - Ready for Implementation
+
+### The Fundamental Difference
+
+**Claude Code (General Purpose):**
+- Must handle ANY coding task
+- Needs to search entire codebase
+- Guesses user intent from vague prompts
+- High token usage (explores everything)
+- Hallucination risk (unknown territory)
+
+**QUAD (Structured Platform):**
+- Knows EXACTLY what workflows exist
+- Context is bounded by ticket/domain
+- Intent is KNOWN from ticket type (USER_STORY, BUG, TASK)
+- Minimal tokens (send only what's needed)
+- Low hallucination (structured outputs)
+
+### Comparison Matrix
+
+| Aspect | Claude Code | QUAD |
+|--------|-------------|------|
+| **Task Scope** | Anything | Defined workflows |
+| **Context Needed** | Everything might be relevant | Only ticket + domain context |
+| **User Intent** | Must guess from prompt | Known from ticket_type |
+| **Tools Available** | 15+ general tools | Scoped per workflow |
+| **Memory** | Conversation + files | Structured DB memory |
+| **Output Format** | Free-form | Schema-validated |
+| **Hallucination Risk** | High | Low |
+| **Token Usage** | High (exploration) | Low (targeted) |
+
+### QUAD's Structured AI Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    QUAD Structured AI Pipeline                           │
+│                                                                          │
+│   1. Task Arrives (e.g., "Start work on QUAD-123")                       │
+│        ↓                                                                 │
+│   2. Determine Task Type                                                 │
+│        → USER_STORY / BUG / TASK / CODE_REVIEW / MEETING_NOTES           │
+│        ↓                                                                 │
+│   3. Load Task Template (from QUAD_memory_templates)                     │
+│        - Pre-defined prompt structure                                    │
+│        - Required context fields                                         │
+│        - Expected output schema                                          │
+│        - Available tools (whitelist)                                     │
+│        ↓                                                                 │
+│   4. Load MINIMAL Context (Not Everything!)                              │
+│        - Ticket: title, description, acceptance_criteria                 │
+│        - Related files: from ticket_file_associations ONLY               │
+│        - Org rules: WHERE circle_type = ticket.circle                    │
+│        - Domain docs: README, CONTRIBUTING only                          │
+│        - NO: Full codebase search, random exploration                    │
+│        ↓                                                                 │
+│   5. Execute with Constrained Tools                                      │
+│        - Tools scoped to task type                                       │
+│        - File access scoped to domain                                    │
+│        - NO: Web search, arbitrary bash                                  │
+│        ↓                                                                 │
+│   6. Validate Output Against Schema                                      │
+│        - Did AI follow expected format?                                  │
+│        - Did AI stay within scope?                                       │
+│        - Did AI produce required fields?                                 │
+│        ↓                                                                 │
+│   7. Record Outcome                                                      │
+│        - Success/Failure in QUAD_ai_operations                           │
+│        - User feedback (👍/👎)                                            │
+│        - Token usage, latency                                            │
+│        - Deviation from expected output                                  │
+│        ↓                                                                 │
+│   8. Learning Loop (Background)                                          │
+│        - Analyze patterns weekly                                         │
+│        - Update templates with low success                               │
+│        - Add successful patterns to RAG                                  │
+│        - Adjust context selection rules                                  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### How AI Systems "Learn" - Options for QUAD
+
+| Method | How It Works | Applicable to QUAD? |
+|--------|--------------|---------------------|
+| **Model Fine-Tuning** | Train on org-specific data | ❌ Too expensive, needs 1000s of examples |
+| **In-Context Learning (ICL)** | Provide examples in prompt | ✅ YES - Use templates with examples |
+| **RAG (Retrieval)** | Retrieve similar past interactions | ✅ YES - Store successful patterns |
+| **Rule-Based** | Human-defined rules in database | ✅ YES - QUAD_org_rules table |
+| **RLHF Lite** | Track feedback, adjust prompts | ✅ YES - Feedback → template updates |
+| **Tool Use Learning** | Learn which tools work best | ✅ YES - Track tool success rates |
+
+### QUAD Learning Implementation
+
+**Layer 1: Explicit Rules (QUAD_org_rules)**
+```sql
+-- Rule: All bug tickets in Development circle must have root cause
+INSERT INTO QUAD_org_rules (org_id, circle_type, rule_category, rule_key, rule_value, is_mandatory) VALUES
+(org_id, 'DEVELOPMENT', 'AI_OUTPUT', 'bug_requires_root_cause',
+ '{"required_fields": ["root_cause_analysis", "fix_description", "test_added"]}', true);
+```
+
+**Layer 2: Task Templates (QUAD_memory_templates)**
+```sql
+-- Template for USER_STORY analysis
+INSERT INTO QUAD_memory_templates (template_code, template_type, template_content) VALUES
+('USER_STORY_ANALYSIS', 'AI_TASK', '{
+  "system_prompt": "You are analyzing a user story for QUAD. Output ONLY the required JSON.",
+  "required_context": ["ticket", "acceptance_criteria", "related_files"],
+  "output_schema": {
+    "implementation_approach": "string",
+    "files_to_modify": ["string"],
+    "estimated_complexity": "LOW|MEDIUM|HIGH",
+    "potential_risks": ["string"]
+  },
+  "tools_allowed": ["read_file", "search_codebase"],
+  "tools_denied": ["write_file", "bash", "web_search"],
+  "max_tokens": 2000
+}');
+```
+
+**Layer 3: RAG Pattern Storage (QUAD_rag_indexes)**
+```sql
+-- Store successful interaction patterns
+INSERT INTO QUAD_rag_indexes (domain_id, content_type, content, embedding, metadata) VALUES
+(domain_id, 'SUCCESSFUL_PATTERN',
+ 'When analyzing auth-related bugs, always check: 1) JWT expiry, 2) Token refresh logic, 3) Session management',
+ '[embedding_vector]',
+ '{"task_type": "BUG", "tags": ["auth", "jwt", "session"], "success_rate": 0.95}');
+```
+
+**Layer 4: Feedback Loop (QUAD_ai_operations + Analytics)**
+```sql
+-- Track outcome for learning
+UPDATE QUAD_ai_operations SET
+  outcome = 'SUCCESS',  -- or FAILURE, PARTIAL
+  user_feedback = 1,    -- thumbs up
+  deviation_score = 0.1 -- how much output deviated from expected
+WHERE id = operation_id;
+
+-- Weekly analysis job
+SELECT
+  template_code,
+  COUNT(*) as total_uses,
+  AVG(CASE WHEN outcome = 'SUCCESS' THEN 1 ELSE 0 END) as success_rate,
+  AVG(deviation_score) as avg_deviation
+FROM QUAD_ai_operations ao
+JOIN QUAD_memory_templates mt ON ao.template_id = mt.id
+WHERE ao.created_at > NOW() - INTERVAL '7 days'
+GROUP BY template_code
+HAVING AVG(CASE WHEN outcome = 'SUCCESS' THEN 1 ELSE 0 END) < 0.8;
+-- Templates with <80% success need review/update
+```
+
+### Context Selection Strategy (Minimal Tokens)
+
+**Instead of sending everything, QUAD sends:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                 Context Selection for Ticket QUAD-123                    │
+│                                                                          │
+│   TICKET TYPE: BUG                                                       │
+│   CIRCLE: DEVELOPMENT                                                    │
+│                                                                          │
+│   REQUIRED CONTEXT (Always Send):                                        │
+│   ├── ticket.title                          (50 tokens)                  │
+│   ├── ticket.description                    (200 tokens)                 │
+│   ├── ticket.acceptance_criteria            (100 tokens)                 │
+│   └── org_rules WHERE circle = DEVELOPMENT  (150 tokens)                 │
+│                                                                          │
+│   CONDITIONAL CONTEXT (Only If Relevant):                                │
+│   ├── IF bug involves "auth"                                             │
+│   │   └── Send: AuthService.java, jwt-config.ts (500 tokens)             │
+│   ├── IF bug involves "database"                                         │
+│   │   └── Send: schema.sql, relevant entity (400 tokens)                 │
+│   └── IF has linked files in ticket_file_associations                    │
+│       └── Send: those specific files only                                │
+│                                                                          │
+│   NEVER SEND (Even If AI Asks):                                          │
+│   ├── Full codebase tree                                                 │
+│   ├── Unrelated domain files                                             │
+│   ├── Other tickets                                                      │
+│   └── Historical conversations                                           │
+│                                                                          │
+│   ESTIMATED CONTEXT: 500-1500 tokens (vs 50K+ for Claude Code)           │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Learning Behavior Implementation
+
+**Phase 1: Rule-Based (Immediate)**
+- Store rules in QUAD_org_rules
+- AI reads rules before every action
+- Human updates rules based on feedback
+
+**Phase 2: Template Optimization (Week 2+)**
+- Track which templates have high/low success
+- A/B test prompt variations
+- Auto-select best performing template
+
+**Phase 3: RAG Enhancement (Month 2+)**
+- Store successful interaction pairs
+- Retrieve similar patterns for new tickets
+- Add to context: "Similar bugs were solved by..."
+
+**Phase 4: Predictive (Month 6+)**
+- Predict likely issues before they happen
+- Suggest preventive actions
+- "Tickets like this usually need X"
+
+### Database Tables for Learning
+
+| Table | Purpose |
+|-------|---------|
+| `QUAD_memory_templates` | Pre-built prompt templates per task type |
+| `QUAD_org_rules` | Organization-specific constraints |
+| `QUAD_rag_indexes` | Successful patterns for retrieval |
+| `QUAD_ai_operations` | Execution log with outcomes |
+| `QUAD_ai_activity_routing` | Which template for which task |
+| `QUAD_ai_analysis_cache` | Cache repeated analyses |
+
+### Key Insight: Why This Reduces Hallucinations
+
+```
+Claude Code (General):
+  User: "Fix the bug"
+  AI: *searches everything* → *guesses what bug means* → *might hallucinate*
+
+QUAD (Structured):
+  User: clicks "Start Work" on ticket QUAD-123 (type=BUG)
+  QUAD:
+    1. Loads BUG template
+    2. Sends ONLY: ticket details + linked files + relevant rules
+    3. AI outputs ONLY: JSON matching bug_fix_schema
+    4. QUAD validates output against schema
+    5. If invalid → reject, don't execute
+
+  NO room for hallucination because:
+  - Context is bounded
+  - Output is schema-validated
+  - Tools are whitelisted
+  - Scope is predetermined
+```
+
+### Implementation Priority
+
+| Priority | Feature | Tables/Code Needed |
+|----------|---------|-------------------|
+| P0 | Task templates | QUAD_memory_templates |
+| P0 | Output schema validation | JSON Schema in templates |
+| P1 | Org rules loading | QUAD_org_rules |
+| P1 | Minimal context selection | Context builder service |
+| P2 | Feedback tracking | QUAD_ai_operations.outcome |
+| P2 | Success rate analytics | Weekly job |
+| P3 | RAG pattern retrieval | QUAD_rag_indexes + embedding |
+| P3 | Template A/B testing | QUAD_ai_activity_routing |
+
+---
+
+## 24. Messenger Channel Architecture
+
+**Date Discussed:** January 4, 2026
+**Status:** Architecture Defined (Phase 2 Implementation)
+**Full Documentation:** [MESSENGER_CHANNEL_ARCHITECTURE.md](../architecture/MESSENGER_CHANNEL_ARCHITECTURE.md)
+
+### The Problem with Current Naming
+
+User raised valid concerns:
+1. **Why `QUAD_slack_messages`?** - We don't store chat messages, only commands/triggers
+2. **Why "slack" specific?** - Should support Teams, Discord, WhatsApp too
+
+### Key Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Store messages?** | NO | Only commands and bot responses. Chat is already in Slack/Teams |
+| **Table naming** | `QUAD_messenger_*` | Channel-agnostic, not vendor-locked |
+| **Message format** | Per-channel | Slack blocks, Teams cards, Discord embeds |
+| **Commands** | Universal | `/quad ticket`, `/quad status` work on all channels |
+
+### What We Store vs Don't Store
+
+```
+✅ STORE:
+- Command: "/quad create-ticket Fix login bug"
+- Parsed args: {"command": "create-ticket", "title": "Fix login bug"}
+- Bot response: "Created DEV-123"
+- Status: completed/failed
+
+❌ DON'T STORE:
+- User conversations
+- Chat history
+- Attachments/files from chat
+- Reactions/emojis
+```
+
+### Proposed Schema Changes
+
+**Rename tables:**
+```
+QUAD_slack_bot_commands  → QUAD_messenger_commands
+QUAD_slack_messages      → QUAD_messenger_outbound
+```
+
+**Add new table:**
+```sql
+QUAD_messenger_channels (
+    channel_type VARCHAR(20),  -- 'slack', 'teams', 'discord', 'whatsapp'
+    channel_id VARCHAR(100),   -- External channel ID
+    webhook_url TEXT,          -- For sending messages
+    notification_types TEXT[]  -- What to send here
+)
+```
+
+### Supported Channels (Phase 2 Priority)
+
+| Priority | Channel | Use Case |
+|----------|---------|----------|
+| P1 | Slack | Enterprise teams |
+| P1 | Email | Async notifications |
+| P2 | Microsoft Teams | Corporate environments |
+| P2 | Discord | Developer communities |
+| P3 | WhatsApp Business | Mobile-first, India market |
+| P3 | SMS | Critical alerts only |
+
+### Implementation Note
+
+This is Phase 2 work. Current `QUAD_slack_*` tables will be:
+1. Kept for Phase 1 Slack-only implementation
+2. Migrated to `QUAD_messenger_*` in Phase 2
+3. Channel-specific formatting added per platform
+
+---
+
+## 25. Schema Naming Convention Detection
+
+**Date Discussed:** January 4, 2026
+**Status:** Designed (Phase 2 Implementation)
+**Full Documentation:** [SCHEMA_NAMING_DETECTION.md](../features/SCHEMA_NAMING_DETECTION.md)
+
+### The Problem
+
+When importing existing projects, schemas often have inconsistent naming:
+- 80% tables use `snake_case`
+- 20% use `PascalCase` or mixed patterns
+- Legacy modules may differ from newer ones
+
+### Solution: Naming Convention Analyzer
+
+**Detection Flow:**
+1. Scan all table/column names
+2. Detect patterns: snake_case, PascalCase, camelCase
+3. Calculate confidence level
+4. Present options to user
+
+### Confidence Levels
+
+| Confidence | Match % | UI Display |
+|------------|---------|------------|
+| HIGH | 90%+ | "Naming Convention Detected: snake_case" |
+| MEDIUM | 70-89% | "Mostly snake_case (some exceptions)" |
+| LOW | 50-69% | "Mixed Naming Conventions" |
+| INCONSISTENT | <50% | "No Dominant Convention" |
+
+### User Options
+
+After analysis, user can choose:
+1. **Use Detected** - Follow the majority pattern (e.g., snake_case)
+2. **Use QUAD** - Apply QUAD naming convention (QUAD_* prefix)
+3. **Custom** - Define their own rules
+
+### Example UI
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ⚠️ Naming Convention: Mostly snake_case (76%)             │
+│                                                              │
+│  • 38/50 tables use snake_case                              │
+│  • 12 tables use PascalCase                                 │
+│                                                              │
+│  [ Use snake_case ]  [ Use QUAD naming ]  [ Customize ]     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Key Insight
+
+This prevents QUAD from generating code that doesn't match the project's existing style. If user chooses detected convention, generated entities/migrations will follow that pattern.
+
+---
+
 ## Document Maintenance
 
 ### How to Update This Document
@@ -2085,6 +2688,9 @@ See: [DOCUMENTATION_INTEGRATION.md](../architecture/DOCUMENTATION_INTEGRATION.md
 | `AI_PRICING_TIERS.md` | Pricing tier details |
 | `quad-vscode-plugin/PLUGIN_SPEC.md` | VS Code plugin spec |
 | `DOCUMENTATION_INTEGRATION.md` | DeepWiki, Confluence, GitBook, Notion integration |
+| `MESSENGER_CHANNEL_ARCHITECTURE.md` | Channel-agnostic messenger design |
+| `QUAD_STRUCTURED_AI_ARCHITECTURE.md` | Structured AI vs general-purpose approach |
+| `SCHEMA_NAMING_DETECTION.md` | Naming convention detection for imports |
 
 ---
 

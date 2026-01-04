@@ -39,6 +39,7 @@ documentation/
 ├── architecture/                       # System Architecture
 │   ├── ARCHITECTURE.md                 # Overview
 │   ├── ARCHITECTURE_ROADMAP.md         # Future plans
+│   ├── BROWSER_IDE_RESEARCH.md         # Competitor IDE analysis (Bolt, Replit, etc.)
 │   ├── OBJECT_MODEL.md                 # Domain objects
 │   ├── SESSION_MANAGEMENT.md           # User sessions
 │   └── MULTI_TENANT_SETUP.md           # Domain isolation

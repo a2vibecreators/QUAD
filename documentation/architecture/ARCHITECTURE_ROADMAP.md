@@ -641,6 +641,19 @@ Developer pushes code
 
 ---
 
+## Browser IDE Research
+
+For detailed analysis of how competitors implement browser-based IDEs, see:
+- **[BROWSER_IDE_RESEARCH.md](BROWSER_IDE_RESEARCH.md)** - Analysis of Bolt.new, Replit, v0.dev, Lovable, Cursor, and GitHub Copilot Workspace
+
+Key insights for QUAD:
+- **WebContainers** (Bolt.new) for zero-server frontend preview
+- **Cloud sandboxes** (Replit) for multi-language backend execution
+- **Task decomposition** (Copilot Workspace) integrated with QUAD tickets
+- **Codebase indexing** (Cursor) - QUAD already has this!
+
+---
+
 ## Files Reference
 
 ### Created This Session
