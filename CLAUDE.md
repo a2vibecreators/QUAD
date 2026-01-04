@@ -22,6 +22,46 @@ This file provides guidance to Claude Code when working with the QUAD Framework 
 - DEV Database: localhost:14201 (quad_dev_db)
 - QA Database: localhost:15201 (quad_qa_db)
 
+## Git Workflow & Repository Structure
+
+### Organizations
+| Organization | Purpose | Visibility |
+|-------------|---------|------------|
+| **a2Vibes** | Active development | Private (members only) |
+| **a2vibecreators** | Backup/Production | Private |
+
+### Branch Strategy
+```
+main ─────────────── protected (backup to a2vibecreators after testing)
+  ├── sumanMain ──── Suman's working branch
+  └── SharuMain ──── Sharath's working branch
+```
+
+### Development Workflow
+1. **All coding happens in a2Vibes org** on your personal branch (sumanMain/SharuMain)
+2. **After testing**, push to a2vibecreators as backup
+3. **Never push directly to main** - merge via pull request
+
+### Sync to Backup (a2vibecreators)
+```bash
+# One-time setup: Add upstream remote
+git remote add upstream git@github.com:a2vibecreators/QUAD.git
+
+# After testing, push to backup
+git push upstream sumanMain:main
+```
+
+### Related Repos (all in a2Vibes)
+- QUAD (parent - this repo)
+- QUAD-web, QUAD-database, QUAD-services
+- QUAD-vscode, QUAD-android, QUAD-ios
+
+### Team Members
+- **sumanaddanki** - Admin, works on `sumanMain`
+- **sharuuu** - Member, works on `SharuMain`
+
+---
+
 ## QUAD Development Model - Revolutionary Paradigm Shift
 
 **CRITICAL:** QUAD Platform enables a fundamentally different development approach compared to traditional Agile.
