@@ -8,10 +8,17 @@
 #   ./deploy-studio.sh qa    - Deploy to QA (qa.quadframe.work)
 #   ./deploy-studio.sh all   - Deploy to both DEV and QA
 #
-# Secrets:
-#   Pulls secrets from Vaultwarden using ~/scripts/vault-secrets.sh
-#   Make sure vault is unlocked: bw unlock --raw > ~/.bw-session
-#   Falls back to .env.deploy if vault not available
+# Secrets Priority (first found wins):
+#   1. Vaultwarden (if vault is unlocked: bw unlock --raw > ~/.bw-session)
+#   2. .env.deploy (if exists in project root)
+#   3. quad-web/.env.local (recommended for local development)
+#   4. Defaults (for database credentials)
+#
+# Setting up .env.local:
+#   If quad-web/.env.local doesn't exist, you can create it from Vaultwarden:
+#   1. Unlock vault: export BW_SESSION=$(bw unlock --raw)
+#   2. Run: ./scripts/setup-dev-environment.sh
+#   This will fetch credentials from vault and create .env.local
 #
 # Note: PROD (quadframe.work) is deployed to GCP Cloud Run, not Mac Studio
 
@@ -90,22 +97,27 @@ deploy_env() {
     fi
 
     # Set environment-specific credentials
-    # Priority: Vault > .env.deploy > defaults
+    # Priority: Vault > .env.deploy > .env.local > defaults
+    # Try to source .env.local from quad-web directory
+    if [ -f "./quad-web/.env.local" ]; then
+        source ./quad-web/.env.local
+    fi
+
     if [ "${ENV}" = "dev" ]; then
-        DB_HOST="${QUAD_DB_HOST:-${DEV_DB_HOST:-postgres-quad-dev}}"
-        DB_NAME="${QUAD_DB_NAME:-${DEV_DB_NAME:-quad_dev_db}}"
-        DB_PASS="${QUAD_DB_PASSWORD:-${DEV_DB_PASS:-quad_dev_pass}}"
-        GOOGLE_CLIENT_ID="${QUAD_GOOGLE_CLIENT_ID:-${DEV_GOOGLE_CLIENT_ID:?ERROR: Google OAuth credentials required}}"
-        GOOGLE_CLIENT_SECRET="${QUAD_GOOGLE_CLIENT_SECRET:-${DEV_GOOGLE_CLIENT_SECRET:?ERROR: Google OAuth credentials required}}"
-        NEXTAUTH_SECRET="${QUAD_NEXTAUTH_SECRET:-${DEV_NEXTAUTH_SECRET:?ERROR: NextAuth secret required}}"
+        DB_HOST="${QUAD_DB_HOST:-${DEV_DB_HOST:-${DB_HOST:-postgres-quad-dev}}}"
+        DB_NAME="${QUAD_DB_NAME:-${DEV_DB_NAME:-${DB_NAME:-quad_dev_db}}}"
+        DB_PASS="${QUAD_DB_PASSWORD:-${DEV_DB_PASS:-${DB_PASSWORD:-quad_dev_pass}}}"
+        GOOGLE_CLIENT_ID="${QUAD_GOOGLE_CLIENT_ID:-${DEV_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID:-}}}"
+        GOOGLE_CLIENT_SECRET="${QUAD_GOOGLE_CLIENT_SECRET:-${DEV_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET:-}}}"
+        NEXTAUTH_SECRET="${QUAD_NEXTAUTH_SECRET:-${DEV_NEXTAUTH_SECRET:-${NEXTAUTH_SECRET:-41hKCOZcnWggq2cG9oBietUYljvN0ZkUqjyFnKdgTEM=}}}"
         NETWORK_NAME="dev-network"
     else
-        DB_HOST="${QUAD_DB_HOST:-${QA_DB_HOST:-postgres-quad-qa}}"
-        DB_NAME="${QUAD_DB_NAME:-${QA_DB_NAME:-quad_qa_db}}"
-        DB_PASS="${QUAD_DB_PASSWORD:-${QA_DB_PASS:-quad_qa_pass}}"
-        GOOGLE_CLIENT_ID="${QUAD_GOOGLE_CLIENT_ID:-${QA_GOOGLE_CLIENT_ID:?ERROR: Google OAuth credentials required}}"
-        GOOGLE_CLIENT_SECRET="${QUAD_GOOGLE_CLIENT_SECRET:-${QA_GOOGLE_CLIENT_SECRET:?ERROR: Google OAuth credentials required}}"
-        NEXTAUTH_SECRET="${QUAD_NEXTAUTH_SECRET:-${QA_NEXTAUTH_SECRET:?ERROR: NextAuth secret required}}"
+        DB_HOST="${QUAD_DB_HOST:-${QA_DB_HOST:-${DB_HOST:-postgres-quad-qa}}}"
+        DB_NAME="${QUAD_DB_NAME:-${QA_DB_NAME:-${DB_NAME:-quad_qa_db}}}"
+        DB_PASS="${QUAD_DB_PASSWORD:-${QA_DB_PASS:-${DB_PASSWORD:-quad_qa_pass}}}"
+        GOOGLE_CLIENT_ID="${QUAD_GOOGLE_CLIENT_ID:-${QA_GOOGLE_CLIENT_ID:-${GOOGLE_CLIENT_ID:-}}}"
+        GOOGLE_CLIENT_SECRET="${QUAD_GOOGLE_CLIENT_SECRET:-${QA_GOOGLE_CLIENT_SECRET:-${GOOGLE_CLIENT_SECRET:-}}}"
+        NEXTAUTH_SECRET="${QUAD_NEXTAUTH_SECRET:-${QA_NEXTAUTH_SECRET:-${NEXTAUTH_SECRET:-41hKCOZcnWggq2cG9oBietUYljvN0ZkUqjyFnKdgTEM=}}}"
         NETWORK_NAME="qa-network"
     fi
 

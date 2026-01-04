@@ -6,6 +6,25 @@ Website: [quadframe.work](https://quadframe.work)
 
 ---
 
+## Getting Started
+
+**New developer?** Follow our platform-specific setup guide:
+
+📚 **[Setup Guide](scripts/SETUP_GUIDE.md)** - Complete setup instructions for Windows, Mac, and Linux
+
+**Quick Start:**
+
+| Platform | Command |
+|----------|---------|
+| **Windows** | `powershell -ExecutionPolicy Bypass -File .\scripts\setup-prerequisites.ps1` |
+| **Mac/Linux** | `./scripts/setup-prerequisites.sh` |
+
+The setup script will check all prerequisites and guide you through installation.
+
+**Prerequisites:** Node.js 18+, Docker Desktop, Git, Java JDK 17+, Maven
+
+---
+
 ## About QUAD
 
 QUAD is a software development methodology that replaces traditional Agile/Scrum with:
