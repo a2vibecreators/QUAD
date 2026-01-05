@@ -87,6 +87,16 @@ Authentication flows, OAuth setup, and onboarding.
 
 ---
 
+## 🔒 Security
+
+Secrets management, vault setup, and security best practices.
+
+| Document | Description |
+|----------|-------------|
+| [VAULTWARDEN_SETUP.md](security/VAULTWARDEN_SETUP.md) | Centralized secrets management (vault.a2vibes.tech) |
+
+---
+
 ## 📘 Methodology (QUAD Approach)
 
 The QUAD methodology documentation explains the **Q-U-A-D workflow** framework.

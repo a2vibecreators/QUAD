@@ -116,6 +116,11 @@ check_command "git" "Git" \
     "true" \
     "https://git-scm.com/"
 
+check_command "bw" "Bitwarden CLI" \
+    "bw --version" \
+    "true" \
+    "npm install -g @bitwarden/cli (for Vaultwarden secrets)"
+
 # =============================================================================
 # Optional Software
 # =============================================================================
@@ -124,15 +129,15 @@ echo ""
 echo -e "${BLUE}Optional Software (Recommended):${NC}"
 echo ""
 
-check_command "bw" "Bitwarden CLI" \
-    "bw --version" \
-    "false" \
-    "npm install -g @bitwarden/cli (for Vaultwarden secrets)"
-
 check_command "jq" "jq (JSON processor)" \
     "jq --version" \
     "false" \
     "brew install jq (Mac) or https://stedolan.github.io/jq/"
+
+check_command "migra" "migra (PostgreSQL schema diff)" \
+    "migra --version" \
+    "false" \
+    "brew install pipx && pipx install 'migra[pg]' && pipx inject migra setuptools"
 
 check_command "curl" "curl" \
     "curl --version | head -1 | awk '{print \$2}'" \

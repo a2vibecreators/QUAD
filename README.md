@@ -115,8 +115,9 @@ cd QUAD
 - ✅ Java 17+ (required)
 - ✅ Maven (required)
 - ✅ Git (required)
-- ⚠️ Bitwarden CLI (optional - for secrets)
+- ✅ Bitwarden CLI (required - for Vaultwarden secrets)
 - ⚠️ jq (optional - JSON processor)
+- ⚠️ migra (optional - database schema migrations)
 
 ### Step 2: Run Interactive Setup
 
@@ -251,12 +252,13 @@ git push
 ### Database (quad-database)
 - **Database:** PostgreSQL 15
 - **Schema:** Raw SQL files (source of truth)
-- **Migrations:** SQL-based migrations
+- **Migrations:** migra (PostgreSQL schema diff tool)
+- **Philosophy:** Pure separation - database operations independent from Java/Spring Boot
 
 ### Infrastructure
 - **Containers:** Docker + Docker Compose
 - **Reverse Proxy:** Caddy 2 (automatic SSL)
-- **Secrets:** Vaultwarden (self-hosted Bitwarden)
+- **Secrets:** Vaultwarden @ vault.a2vibes.tech (GCP-hosted, shared across all A2Vibe projects)
 - **DEV/QA:** Mac Studio (local Docker)
 - **PROD:** GCP Cloud Run
 
@@ -313,6 +315,7 @@ git push
 |----------|-------------|
 | [Getting Started](documentation/getting-started/GETTING_STARTED.md) | Quick start guide for QUAD Platform |
 | [Team Access](documentation/getting-started/TEAM_ACCESS.md) | Vaultwarden setup and team collaboration |
+| [Vaultwarden Setup](documentation/security/VAULTWARDEN_SETUP.md) | Centralized secrets management (vault.a2vibes.tech) |
 | [QUAD Methodology](documentation/methodology/QUAD.md) | Core QUAD methodology (Q-U-A-D stages) |
 | [Agent Rules](documentation/agents/AGENT_RULES.md) | 40 rules for AI agent development |
 | [Architecture](documentation/architecture/ARCHITECTURE.md) | System architecture overview |
@@ -335,6 +338,7 @@ git push
 - 📁 [Architecture](documentation/architecture/) - System design
 - 📁 [Features](documentation/features/) - Product features
 - 📁 [Authentication](documentation/auth/) - OAuth and security
+- 📁 [Security](documentation/security/) - Secrets management (Vaultwarden)
 - 📁 [Agents](documentation/agents/) - AI agent templates
 - 📁 [AI & Optimization](documentation/ai/) - AI models and token costs
 - 📁 [API](documentation/api/) - API reference
