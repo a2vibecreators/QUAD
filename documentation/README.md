@@ -1,7 +1,7 @@
 # QUAD Platform Documentation Index
 
-**Last Updated:** January 4, 2026
-**Total Documents:** 130+
+**Last Updated:** January 5, 2026
+**Total Documents:** 144+
 **Base Path:** `/documentation/`
 
 Welcome to QUAD Platform documentation! This index helps you navigate all available documentation organized by topic.
@@ -42,7 +42,9 @@ Welcome to QUAD Platform documentation! This index helps you navigate all availa
 | [overview/PROJECT_OVERVIEW.md](overview/PROJECT_OVERVIEW.md) | What is QUAD Platform? | 15 min |
 | [getting-started/GETTING_STARTED.md](getting-started/GETTING_STARTED.md) | Local development setup | 10 min |
 | [overview/FEATURES.md](overview/FEATURES.md) | Complete feature list | 20 min |
-| [SITEMAP.md](SITEMAP.md) | Complete site navigation with auth flows | 30 min |
+| [sitemap/sitemap_documentation.md](sitemap/sitemap_documentation.md) | Complete documentation index (144 files) | 30 min |
+| [sitemap/sitemap_static.md](sitemap/sitemap_static.md) | Public website pages sitemap | 15 min |
+| [sitemap/sitemap_login.md](sitemap/sitemap_login.md) | Authenticated pages sitemap | 15 min |
 
 ---
 
@@ -385,15 +387,16 @@ Internal team documentation, discussions, and planning.
 | Planning/Strategy | 12 | ✅ Complete |
 | Case Studies | 7 | ✅ Complete |
 | Internal | 8 | ✅ Complete |
-| **TOTAL** | **130+** | ✅ Complete |
+| **TOTAL** | **144+** | ✅ Complete |
 
-### Recent Updates (January 4, 2026)
+### Recent Updates (January 5, 2026)
 
-- ✅ Reorganized documentation structure (root → folders)
-- ✅ Created new folders: `getting-started/`, `overview/`, `auth/`, `planning/`
-- ✅ Moved files to logical groupings
-- ✅ Added comprehensive SITEMAP.md with auth flow diagrams
-- ✅ Updated this README.md with new paths
+- ✅ Created comprehensive documentation sitemap (144 files indexed)
+- ✅ Reorganized sitemap folder: sitemap_static.md, sitemap_login.md, sitemap_documentation.md
+- ✅ Moved TEAM_ACCESS.md to getting-started folder
+- ✅ Updated root README.md with correct documentation paths
+- ✅ Fixed all broken documentation links
+- ✅ Added browse-by-topic navigation
 
 ---
 
@@ -411,7 +414,8 @@ Internal team documentation, discussions, and planning.
 - **API Endpoints** → [api/](api/)
 - **Deployment** → [deployment/](deployment/)
 - **Testing** → [testing/](testing/)
-- **Site Navigation** → [SITEMAP.md](SITEMAP.md)
+- **Documentation Index** → [sitemap/sitemap_documentation.md](sitemap/sitemap_documentation.md)
+- **Website Sitemaps** → [sitemap/sitemap_static.md](sitemap/sitemap_static.md), [sitemap/sitemap_login.md](sitemap/sitemap_login.md)
 
 ### By Role
 
@@ -444,6 +448,6 @@ To add or update documentation:
 
 ---
 
-**Last Updated:** January 4, 2026
+**Last Updated:** January 5, 2026
 **Maintained by:** Suman Addanki (via Claude Code)
-**Version:** 2.0 (Reorganized Structure)
+**Version:** 2.1 (Complete Sitemap + Fixed Links)
