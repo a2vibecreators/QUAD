@@ -268,19 +268,19 @@ git push
 
 | Service | Container | Port | URL |
 |---------|-----------|------|-----|
-| Web | `quadframework-web-dev` | 14001 | https://dev.quadframe.work |
+| Web | `quad-web-dev` | 14001 | https://dev.quadframe.work |
 | Java API | `quad-services-dev` | 14101 | http://quad-services-dev:8080 |
 | API Gateway | `quad-api-dev` | 14301 | https://dev-api.quadframe.work |
-| Database | `postgres-quad-dev` | 14201 | localhost:14201 |
+| Database | `quad-db-dev` | 14201 | localhost:14201 |
 
 ### QA (Quality Assurance)
 
 | Service | Container | Port | URL |
 |---------|-----------|------|-----|
-| Web | `quadframework-web-qa` | 15001 | https://qa.quadframe.work |
+| Web | `quad-web-qa` | 15001 | https://qa.quadframe.work |
 | Java API | `quad-services-qa` | 15101 | http://quad-services-qa:8080 |
 | API Gateway | `quad-api-qa` | 15301 | https://qa-api.quadframe.work |
-| Database | `postgres-quad-qa` | 15201 | localhost:15201 |
+| Database | `quad-db-qa` | 15201 | localhost:15201 |
 
 ### PROD (Production)
 
@@ -304,37 +304,17 @@ git push
 
 ### Deep Dive Documentation
 
-```
-documentation/
-├── architecture/
-│   ├── OVERVIEW.md              # System architecture
-│   ├── MICROSERVICES.md         # Service breakdown
-│   └── API_GATEWAY.md           # API gateway design
-├── database/
-│   ├── SCHEMA.md                # Database schema
-│   ├── MIGRATIONS.md            # Migration guide
-│   └── QUAD_TABLES.md           # QUAD_ prefix tables
-├── api/
-│   ├── REST_API.md              # REST API reference
-│   ├── OAUTH.md                 # OAuth flow
-│   └── WEBSOCKETS.md            # WebSocket API
-├── deployment/
-│   ├── DOCKER.md                # Docker setup
-│   ├── CADDY.md                 # Caddy configuration
-│   └── GCP.md                   # GCP deployment
-├── guides/
-│   ├── DEVELOPER_ONBOARDING.md  # New developer guide
-│   ├── OAUTH_SETUP.md           # OAuth configuration
-│   └── TROUBLESHOOTING.md       # Common issues
-└── README.md                    # Documentation index
-```
+**📚 Complete documentation with 130+ guides organized by topic:**
 
-### Quick Links
+➡️ **[documentation/README.md](documentation/README.md)** - Full documentation index with table of contents
 
-- **Architecture:** [documentation/architecture/OVERVIEW.md](documentation/architecture/OVERVIEW.md)
-- **Database:** [documentation/database/SCHEMA.md](documentation/database/SCHEMA.md)
-- **API Reference:** [documentation/api/REST_API.md](documentation/api/REST_API.md)
+**Quick Links:**
+- **Getting Started:** [documentation/getting-started/GETTING_STARTED.md](documentation/getting-started/GETTING_STARTED.md)
+- **Architecture:** [documentation/architecture/ARCHITECTURE.md](documentation/architecture/ARCHITECTURE.md)
+- **Database:** [documentation/database/DATABASE_SCHEMA.md](documentation/database/DATABASE_SCHEMA.md)
+- **API Reference:** [documentation/api/API_REFERENCE.md](documentation/api/API_REFERENCE.md)
 - **Sitemap:** [documentation/SITEMAP.md](documentation/SITEMAP.md)
+- **QUAD Methodology:** [documentation/methodology/QUAD.md](documentation/methodology/QUAD.md)
 
 ---
 
