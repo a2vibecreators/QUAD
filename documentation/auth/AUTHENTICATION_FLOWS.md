@@ -150,25 +150,16 @@ Issues: None (works correctly)
 12. Frontend calls: POST /api/auth/complete-oauth-signup
     ├─ Backend creates: Organization + User
     ├─ Response: { success: true }
-13. Frontend calls: signIn('google', { callbackUrl: '/dashboard', redirect: true })
-14. ⚠️ ISSUE: Redirects to Google AGAIN
-15. Redirect to: accounts.google.com
-16. Google auto-approves (already authorized)
-17. Redirect to: /api/auth/callback/google
-18. NextAuth signIn callback:
-    ├─ Calls: quad-services-dev:8080/users/email/newuser@example.com
-    ├─ Response: 200 OK (user NOW exists!)
-    ├─ Log: "Account linking: newuser@example.com signed in via google"
-    └─ Returns: true
-19. NextAuth jwt callback: Creates session
-20. NextAuth redirect callback: /dashboard
-21. User lands on: /dashboard ✅
+13. ✅ FIXED: Frontend calls: POST /api/auth/create-session
+    ├─ Fetches user from backend
+    ├─ Creates JWT token
+    ├─ Sets NextAuth session cookie
+    ├─ Response: { success: true }
+14. Frontend redirects: router.push('/dashboard')
+15. User lands on: /dashboard ✅
 
-Duration: 15-20 seconds
-Issues:
-- Step 14-17: User sees Google redirect AGAIN (confusing)
-- Expected: Silent session creation
-- Actual: Full OAuth redirect visible
+Duration: 3-5 seconds
+Issues: ✅ RESOLVED - No double redirect
 ```
 
 ### Flow 3: Email/OTP Sign-In (Returning User)
@@ -225,18 +216,15 @@ Issues: None (works correctly)
 
 ## Known Issues
 
-### Issue 1: OAuth Sign-Up Redirects to Google Twice
+### ✅ Issue 1: OAuth Sign-Up Redirects to Google Twice (RESOLVED)
 
+**Status:** ✅ **FIXED** (January 5, 2026)
 **Severity:** Medium (UX confusion, but flow completes)
 **Affected Flow:** oauth-signup-new-user
-**Steps to Reproduce:**
-1. New user clicks "Sign in with Google"
-2. Completes signup form
-3. Sees Google OAuth redirect AGAIN
 
 **Root Cause:**
 ```typescript
-// After user creation (line 208-213 in signup/page.tsx)
+// BEFORE (line 208-213 in signup/page.tsx)
 if (data.success) {
   await signIn(verifiedUser.provider, {
     callbackUrl: '/dashboard',
@@ -245,34 +233,53 @@ if (data.success) {
 }
 ```
 
-**Expected:** Silent session creation
-**Actual:** Full OAuth redirect (user sees Google screen again)
+**Solution Implemented (Option A - Server-Side Session Creation):**
 
-**Fix Options:**
-
-**Option A:** Use NextAuth session update (server-side)
+**1. Created new endpoint:** `/api/auth/create-session/route.ts`
 ```typescript
-// After user creation
-const session = await getServerSession(authOptions);
-await session.update({ user: newUser });
-router.push('/dashboard');
-```
+// Manually creates NextAuth session without OAuth redirect
+const token = await encode({
+  secret: JWT_SECRET,
+  token: { ...userdata },
+  maxAge: 24 * 60 * 60,
+});
 
-**Option B:** Modify signIn to use existing OAuth token
-```typescript
-// Pass id_token from previous OAuth flow
-await signIn('credentials', {
-  token: previousOAuthToken,
-  redirect: false,
+cookies().set({
+  name: 'next-auth.session-token',
+  value: token,
+  httpOnly: true,
+  maxAge: 24 * 60 * 60,
 });
 ```
 
-**Option C:** Accept current behavior, add loading indicator
-```
-"Creating your account... (You may briefly see Google again)"
+**2. Updated signup flow:** `signup/page.tsx`
+```typescript
+// AFTER - Direct session creation
+if (data.success) {
+  await fetch('/api/auth/create-session', {
+    method: 'POST',
+    body: JSON.stringify({ email, provider }),
+  });
+  router.push('/dashboard'); // No OAuth redirect
+}
 ```
 
-**Recommended:** Option A (cleanest UX)
+**Result:** Users no longer see Google twice. Flow is now:
+```
+1. Click Google → OAuth → Signup form
+2. Complete form → Backend creates user
+3. Frontend creates session → Dashboard ✅
+```
+
+**Testing:**
+```bash
+# Test new user OAuth signup
+1. Visit https://dev.quadframe.work/auth/login
+2. Click "Sign in with Google"
+3. Select account (account picker should show)
+4. Complete signup form
+5. Should go directly to dashboard (no second Google screen)
+```
 
 ---
 
@@ -282,7 +289,7 @@ await signIn('credentials', {
 
 | # | Scenario | Entry Point | Expected Outcome | Status |
 |---|----------|-------------|------------------|--------|
-| 1 | **New user, OAuth sign-up** | Click Google on /auth/login | Create account → Dashboard | ⚠️ Works but double redirect |
+| 1 | **New user, OAuth sign-up** | Click Google on /auth/login | Create account → Dashboard | ✅ Fixed - No double redirect |
 | 2 | **Existing user, OAuth sign-in** | Click Google on /auth/login | Dashboard | ✅ Works |
 | 3 | **New user, email/OTP sign-up** | /auth/signup → Enter email | Verify OTP → Dashboard | ✅ Works |
 | 4 | **Existing user, email/OTP sign-in** | /auth/login → Enter email | Verify OTP → Dashboard | ✅ Works |
