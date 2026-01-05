@@ -16,7 +16,7 @@
 
 # QUAD Web UI (Next.js Frontend)
 dev.quadframe.work {
-    reverse_proxy quadframework-web-dev:3000
+    reverse_proxy quad-web-dev:3000
 
     # Enable compression
     encode gzip zstd
