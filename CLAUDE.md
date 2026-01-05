@@ -429,10 +429,8 @@ quadframework/
 │   │   ├── demo/                # Dashboard demo
 │   │   └── ...
 │   ├── components/              # Reusable components
-│   └── lib/                     # Utilities, Prisma client
-├── prisma/                      # Database schema
-│   └── schema.prisma            # QUAD tables (QUAD_ prefix)
-├── quad-services/          # Java Spring Boot backend (CURRENT)
+│   └── lib/                     # Utilities, API clients
+├── quad-services/          # Java Spring Boot backend (PRIMARY)
 │   ├── src/main/java/com/quad/services/
 │   │   ├── controller/          # REST endpoints (Auth, User)
 │   │   ├── service/             # Business logic (AuthService, UserService)
@@ -685,7 +683,7 @@ DATABASE_URL="postgresql://quad_user:quad_qa_pass@localhost:15201/quad_qa_db?sch
 - **Schema:** Raw SQL files in `quad-database/sql/` (source of truth)
 - **Backend:** Java Spring Boot + JPA (quad-services/)
 - **Frontend:** Next.js calls Java backend via HTTP (java-backend.ts)
-- **Legacy:** ⚠️ Some API routes still use old Prisma-based auth.ts (being migrated)
+- **Migration Complete:** All auth logic migrated to Java backend (Jan 2026)
 
 **Database Commands:**
 ```bash
@@ -720,7 +718,7 @@ cd quad-database && ./sync/sync-db.sh dev
 
 ## Test Data (Seed Files)
 
-**Journey 1: HealthTrack Startup** (`prisma/seeds/journey1_healthtrack.sql`)
+**Journey 1: HealthTrack Startup** (`quad-database/sql/seeds/journey1_healthtrack.sql`)
 
 A complete test scenario for a 4-person startup building a mobile health app.
 
@@ -743,8 +741,8 @@ fullstack@healthtrack.io / Test123!@# (SENIOR_DEVELOPER)
 
 **Run Seed:**
 ```bash
-docker cp prisma/seeds/journey1_healthtrack.sql postgres-dev:/tmp/
-docker exec postgres-dev psql -U nutrinine_user -d quad_dev_db -f /tmp/journey1_healthtrack.sql
+docker cp quad-database/sql/seeds/journey1_healthtrack.sql postgres-quad-dev:/tmp/
+docker exec postgres-quad-dev psql -U quad_user -d quad_dev_db -f /tmp/journey1_healthtrack.sql
 ```
 
 **More test journeys:** See `documentation/TEST_JOURNEYS.md` for 6 complete scenarios (Startup, Small Business, Enterprise).
@@ -950,14 +948,14 @@ npm run build
 # Start production server
 npm start
 
-# Generate Prisma client
-npx prisma generate
+# Build Java backend
+cd quad-services && mvn clean package
 
-# Push schema changes
-npx prisma db push
+# Run Java backend (applies JPA schema)
+java -jar target/quad-services-*.jar
 
-# View database
-npx prisma studio
+# View database (use any PostgreSQL client)
+psql -h localhost -p 14201 -U quad_user -d quad_dev_db
 ```
 
 ---
