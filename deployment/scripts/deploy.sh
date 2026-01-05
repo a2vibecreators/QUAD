@@ -16,7 +16,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ROOT_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"  # Go up 2 levels: scripts -> deployment -> QUAD
 ENV="${1:-dev}"
 COMPONENT="${2:-all}"
 
@@ -29,9 +29,10 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 print_banner() {
+    local ENV_UPPER=$(echo "$ENV" | tr '[:lower:]' '[:upper:]')
     echo ""
     echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║  QUAD Framework - ${ENV^^} Deployment                          ║${NC}"
+    echo -e "${BLUE}║  QUAD Framework - ${ENV_UPPER} Deployment                          ║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
