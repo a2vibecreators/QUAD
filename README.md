@@ -2,444 +2,391 @@
 
 **Quick Unified Agentic Development** - A modern software development methodology for the AI era.
 
-Website: [quadframe.work](https://quadframe.work)
+---
+
+## 📚 Table of Contents
+
+1. [🎯 What is QUAD?](#-what-is-quad) - Two products, one methodology
+2. [🏗️ Architecture Overview](#️-architecture-overview) - How components fit together
+3. [🚀 Quick Start (Sharath Start Here!)](#-quick-start-sharath-start-here) - Get up and running
+4. [📦 Repository Structure](#-repository-structure) - Git submodules
+5. [🔧 Tech Stack](#-tech-stack) - Technologies used
+6. [🌐 Environments](#-environments) - DEV, QA, PROD
+7. [📖 Documentation](#-documentation) - Deep dive into details
 
 ---
 
-## Table of Contents
+## 🎯 What is QUAD?
 
-1. [Quick Navigation](#quick-navigation) - Start here based on your role
-2. [First Time Setup (Sharath Start Here!)](#first-time-setup) - Step-by-step local setup
-3. [About QUAD](#about-quad) - What is QUAD methodology
-4. [Repository Structure](#repository-structure) - How code is organized
-5. [Working with Submodules](#working-with-submodules) - Git workflow
-6. [Tech Stack](#tech-stack) - Technologies used
-7. [Development](#development) - Daily development commands
-8. [Deployment](#deployment) - Deploy to DEV/QA/PROD
-9. [Related Documentation](#related-documentation) - More docs
+QUAD is **two products**:
 
----
+### 1. quadframe.work (Static Marketing Site)
+- **Live:** https://quadframe.work
+- **Purpose:** Learn about QUAD methodology, read docs, watch videos
+- **Stack:** Next.js static site (free forever)
+- **Hosted:** GCP Cloud Run
 
-## Quick Navigation
+### 2. QUAD Platform (Self-Hosted Product)
+- **Purpose:** AI-powered development environment for teams
+- **Stack:** Next.js + Java Spring Boot + PostgreSQL + Docker
+- **Deployment:** Customer's own infrastructure (Mac Studio, AWS, Azure, GCP)
+- **Pricing:** Free tier (5 users) → Pro ($99/month) → Enterprise ($499/month)
 
-| Who Are You? | Start Here | Then Read |
-|--------------|------------|-----------|
-| **Sharath (New Developer)** | [First Time Setup](#first-time-setup) below | [CLAUDE.md](CLAUDE.md) for project rules |
-| **Using Claude Code** | [CLAUDE.md](CLAUDE.md) | [.claude/](.claude/README.md) for commands |
-| **Understanding QUAD** | [Documentation](documentation/README.md) | [Sitemap](documentation/SITEMAP.md) |
-| **Returning Developer** | [Development](#development) section | Run `npm run dev` |
+**This repo:** Source code for BOTH products (shared codebase).
 
 ---
 
-## First Time Setup
+## 🏗️ Architecture Overview
 
-**Hi Sharath!** Follow these steps to set up QUAD locally on your Windows or Mac.
-
-### Step 1: Prerequisites
-
-Make sure you have these installed:
-
-| Software | Windows | Mac |
-|----------|---------|-----|
-| **Git** | [Download](https://git-scm.com/download/win) | `brew install git` |
-| **Node.js 18+** | [Download](https://nodejs.org/) | `brew install node` |
-| **Docker Desktop** | [Download](https://www.docker.com/products/docker-desktop/) | [Download](https://www.docker.com/products/docker-desktop/) |
-| **Java JDK 17+** | [Download](https://adoptium.net/) | `brew install openjdk@17` |
-| **Maven** | [Download](https://maven.apache.org/download.cgi) | `brew install maven` |
-| **VS Code** | [Download](https://code.visualstudio.com/) | [Download](https://code.visualstudio.com/) |
-
-### Step 2: Clone the Repository
-
-```bash
-# Clone with all submodules
-git clone --recurse-submodules git@github.com:a2Vibes/QUAD.git
-
-# Navigate to project
-cd QUAD
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        QUAD Platform Architecture                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  External Clients                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │ VS Code Extension │ Mobile Apps │ Browser UI │ CLI Tools    │  │
+│  └───────┬──────────────────┬─────────────┬──────────┬──────────┘  │
+│          │                  │             │          │              │
+│          │ HTTPS            │ HTTPS       │ HTTPS    │ HTTPS        │
+│          │                  │             │          │              │
+│          └──────────────────┴─────────────┴──────────┘              │
+│                             │                                        │
+│                   ┌─────────▼──────────┐                            │
+│                   │   quad-api (3100)  │ ← API Gateway              │
+│                   │  [Rate Limiting]   │   (External clients)       │
+│                   │  [API Key Auth]    │                            │
+│                   │  [Whitelist]       │                            │
+│                   └─────────┬──────────┘                            │
+│                             │                                        │
+│  ┌──────────────────────────┼──────────────────────────────────┐   │
+│  │ Internal Docker Network  │                                   │   │
+│  │                          │                                   │   │
+│  │  ┌──────────────┐  ┌─────▼────────────┐  ┌────────────────┐ │   │
+│  │  │  quad-web    │  │ quad-services    │  │ postgres-quad  │ │   │
+│  │  │  (Next.js)   ├──►  (Java Spring)   ├──► (PostgreSQL)   │ │   │
+│  │  │  Port: 3000  │  │  Port: 8080      │  │ Port: 5432     │ │   │
+│  │  └──────────────┘  └──────────────────┘  └────────────────┘ │   │
+│  │                                                               │   │
+│  └───────────────────────────────────────────────────────────────┘   │
+│                             │                                        │
+│                   ┌─────────▼──────────┐                            │
+│                   │   Caddy (80/443)   │ ← Reverse Proxy            │
+│                   │   [SSL/HTTPS]      │   (dev/qa.quadframe.work)  │
+│                   └────────────────────┘                            │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Step 3: Run Setup Script
+### Component Responsibilities
+
+| Component | Purpose | Technology |
+|-----------|---------|------------|
+| **quad-web** | Web UI (marketing + dashboard) | Next.js 15 + TypeScript + Tailwind |
+| **quad-services** | Business logic, REST APIs, OAuth | Java Spring Boot 3.2.1 + JPA |
+| **quad-database** | Schema, migrations, SQL files | PostgreSQL 15 + SQL |
+| **quad-api** | API gateway for external clients | Node.js Express + rate limiting |
+| **Caddy** | SSL/HTTPS termination | Caddy 2 reverse proxy |
+
+**Data Flow:**
+1. User visits https://dev.quadframe.work → Caddy → quad-web (Next.js)
+2. quad-web calls quad-services (Java backend) via HTTP
+3. quad-services queries PostgreSQL database
+4. VS Code extension/Mobile apps → quad-api (gateway) → quad-services
+
+---
+
+## 🚀 Quick Start (Sharath Start Here!)
+
+### Step 1: Check Prerequisites
+
+```bash
+# Clone repo
+git clone --recurse-submodules git@github.com:a2Vibes/QUAD.git
+cd QUAD
+
+# Check if you have everything installed
+./deployment/scripts/check-prerequisites.sh
+```
+
+**What gets checked:**
+- ✅ Docker Desktop (required)
+- ✅ Node.js 18+ (required)
+- ✅ Java 17+ (required)
+- ✅ Maven (required)
+- ✅ Git (required)
+- ⚠️ Bitwarden CLI (optional - for secrets)
+- ⚠️ jq (optional - JSON processor)
+
+### Step 2: Run Interactive Setup
 
 | Platform | Command |
 |----------|---------|
-| **Windows (PowerShell)** | `powershell -ExecutionPolicy Bypass -File .\scripts\setup-prerequisites.ps1` |
-| **Mac/Linux** | `./scripts/setup-prerequisites.sh` |
+| **Mac/Linux** | `./deployment/scripts/setup.sh` |
+| **Windows (PowerShell)** | `powershell -ExecutionPolicy Bypass -File .\deployment\scripts\setup.ps1` |
+| **Windows (CMD)** | `.\deployment\scripts\setup.bat` |
 
-The script will check all prerequisites and guide you through installation.
+**What the setup script does:**
+1. ✅ Checks prerequisites
+2. ✅ Fetches OAuth secrets from Vaultwarden
+3. ✅ Sets up Caddy reverse proxy
+4. ✅ Creates Docker networks
+5. ✅ Asks if you want to deploy now
 
-### Step 4: Start Development
+### Step 3: Access Your Deployment
 
-```bash
-# Install dependencies
-npm install
+| Environment | URL | Purpose |
+|-------------|-----|---------|
+| **DEV** | https://dev.quadframe.work | Development environment |
+| **QA** | https://qa.quadframe.work | QA/Testing environment |
+| **PROD** | https://quadframe.work | Production (GCP Cloud Run) |
 
-# Start the development server
-npm run dev
-```
+### Step 4: Read Project Rules
 
-Open [http://localhost:3003](http://localhost:3003) in your browser.
+Before making any code changes:
 
-### Step 5: Read Project Rules
+1. **[CLAUDE.md](CLAUDE.md)** - Complete project documentation
+   - Tech stack, architecture, deployment
+   - OAuth configuration, secrets management
+   - Container names, DNS configuration
 
-Before making any changes, read these files:
+2. **[.claude/rules/AGENT_RULES.md](.claude/rules/AGENT_RULES.md)** - 11 core development rules
+   - Session management, todo tracking
+   - Database tables (QUAD_ prefix)
+   - Git commit conventions
 
-1. [CLAUDE.md](CLAUDE.md) - Project architecture, tech stack, deployment
-2. [.claude/rules/AGENT_RULES.md](.claude/rules/AGENT_RULES.md) - 11 development rules
-3. [documentation/README.md](documentation/README.md) - All documentation
+3. **[deployment/README.md](quad-web/deployment/README.md)** - Deployment guide
+   - Environment files (.env)
+   - Container troubleshooting
+   - Caddy configuration
 
 ### Need Help?
 
-- **Full developer onboarding:** [documentation/getting-started/DEVELOPER_ONBOARDING.md](documentation/getting-started/DEVELOPER_ONBOARDING.md)
-- Setup scripts: [scripts/SETUP_GUIDE.md](scripts/SETUP_GUIDE.md)
-- Ask Suman or check Slack #quad-dev
+- **Architecture:** [documentation/architecture/](documentation/architecture/)
+- **Database:** [documentation/database/](documentation/database/)
+- **API Reference:** [documentation/api/](documentation/api/)
+- **Slack:** #quad-dev channel
+- **Ask:** Suman or Sharath
 
 ---
 
-## About QUAD
+## 📦 Repository Structure
 
-QUAD is a software development methodology that replaces traditional Agile/Scrum with:
-- **AI-powered automation** - AI agents handle repetitive tasks
-- **Documentation-first practices** - Docs written before code
-- **Four functional circles** - Management, Development, QA, Infrastructure
-
-### The 1-2-3-4 Hierarchy
-
-- **1 Method** → QUAD (Quick Unified Agentic Development)
-- **2 Dimensions** → Business + Technical
-- **3 Axioms** → Operators, AI Agents, Docs-First
-- **4 Circles** → Management, Development, QA, Infrastructure
-
----
-
-## Repository Structure
-
-**Git Organization:** Parent repo with git submodules (same pattern as NutriNine)
+**Git Organization:** Parent repo with submodules (microservices pattern)
 
 ```
-a2vibecreators/                       # GitHub Organization
-│
-├── quadframework/                    # Parent repo (THIS REPO)
-│   ├── .gitmodules                   # Submodule definitions
-│   ├── quad-database/                # ← Git Submodule (Prisma schema)
-│   ├── quad-services/                # ← Git Submodule (Core business logic)
-│   ├── quad-web/                     # ← Git Submodule (Next.js web app)
-│   ├── quad-ios/                     # ← Git Submodule (iOS native app)
-│   ├── quad-android/                 # ← Git Submodule (Android native app)
-│   ├── quad-vscode/                  # ← Git Submodule (VS Code extension)
-│   ├── documentation/                # Keep in parent (shared docs)
-│   └── scripts/                      # Deploy scripts
-│
-├── quad-database/                    # Standalone repo
-├── quad-services/                    # Standalone repo
-├── quad-web/                         # Standalone repo
-├── quad-ios/                         # Standalone repo
-├── quad-android/                     # Standalone repo
-└── quad-vscode/                      # Standalone repo
+a2Vibes/QUAD/                            # Parent repo (THIS REPO)
+├── quad-web/                             # Git Submodule → Next.js frontend
+├── quad-services/                        # Git Submodule → Java backend
+├── quad-database/                        # Git Submodule → SQL schema
+├── quad-api/                             # Git Submodule → API Gateway
+├── quad-vscode/                          # Git Submodule → VS Code extension
+├── quad-ios/                             # Git Submodule → iOS app (future)
+├── quad-android/                         # Git Submodule → Android app (future)
+├── deployment/                           # Deployment scripts + Caddy config
+│   ├── scripts/
+│   │   ├── check-prerequisites.sh       # Prerequisites checker
+│   │   ├── setup.sh                      # Interactive setup (Mac/Linux)
+│   │   ├── setup.bat                     # Interactive setup (Windows CMD)
+│   │   ├── setup.ps1                     # Interactive setup (PowerShell)
+│   │   ├── fetch-secrets.sh              # Vaultwarden secret fetcher
+│   │   └── deploy.sh                     # Main deployment script
+│   ├── caddy/
+│   │   ├── Caddyfile.dev                # Caddy config for DEV
+│   │   └── Caddyfile.qa                 # Caddy config for QA
+│   └── README.md                         # Deployment documentation
+├── documentation/                        # Comprehensive docs
+│   ├── architecture/                    # Architecture docs
+│   ├── database/                        # Database schema docs
+│   ├── api/                             # API reference
+│   ├── deployment/                      # Deployment guides
+│   └── guides/                          # How-to guides
+├── .claude/                              # Claude Code agent rules
+│   ├── commands/                        # Slash commands (/quad-init)
+│   └── rules/                           # Agent behavior rules
+├── CLAUDE.md                             # Project overview (start here!)
+└── README.md                             # This file
 ```
 
-### GitHub Repositories
-
-| Repository | Type | Description |
-|------------|------|-------------|
-| [a2vibecreators/quadframework](https://github.com/a2vibecreators/quadframework) | Parent | Parent repo with submodules |
-| [a2vibecreators/quad-database](https://github.com/a2vibecreators/quad-database) | Submodule | Prisma schema & migrations |
-| [a2vibecreators/quad-services](https://github.com/a2vibecreators/quad-services) | Submodule | Core business logic |
-| [a2vibecreators/quad-web](https://github.com/a2vibecreators/quad-web) | Submodule | Next.js web application |
-| [a2vibecreators/quad-ios](https://github.com/a2vibecreators/quad-ios) | Submodule | iOS native app (SwiftUI) |
-| [a2vibecreators/quad-android](https://github.com/a2vibecreators/quad-android) | Submodule | Android native app (Kotlin) |
-| [a2vibecreators/quad-vscode](https://github.com/a2vibecreators/quad-vscode) | Submodule | VS Code extension |
-
----
-
-## Working with Submodules
-
-### Clone with All Submodules
+### Submodule Workflow
 
 ```bash
-# Clone with all submodules (recommended for new developers)
-git clone --recurse-submodules git@github.com:a2vibecreators/quadframework.git
-
-# If already cloned, initialize submodules
-git submodule update --init --recursive
-```
-
-### Pull Latest Changes (Including Submodules)
-
-```bash
-# Pull parent repo and update all submodules
+# Pull latest changes (parent + all submodules)
 git pull --recurse-submodules
 
-# Or update all submodules to latest
+# Update submodules to latest
 git submodule update --remote --merge
-```
 
-### Make Changes to a Submodule
-
-```bash
-# 1. Navigate to submodule directory
-cd quadframework-web
-
-# 2. Make changes, commit, and push IN THE SUBMODULE
+# Make changes in a submodule
+cd quad-web
 git add .
-git commit -m "Your commit message"
+git commit -m "feat: Add new feature"
 git push
 
-# 3. Go back to parent and update submodule reference
+# Update parent repo to point to new commit
 cd ..
-git add quadframework-web
-git commit -m "Update quadframework-web submodule"
-git push
-```
-
-### Creating Submodule Repositories
-
-To set up submodules from scratch (admin only):
-
-```bash
-# 1. Create repo on GitHub
-gh repo create a2vibecreators/quadframework-database --public
-
-# 2. Add as submodule in parent repo
-cd quadframework
-git submodule add git@github.com:a2vibecreators/quadframework-database.git
-
-# 3. Commit the .gitmodules file
-git add .gitmodules quadframework-database
-git commit -m "Add quadframework-database submodule"
+git add quad-web
+git commit -m "Update quad-web submodule"
 git push
 ```
 
 ---
 
-## Submodule Descriptions
+## 🔧 Tech Stack
 
-### quadframework-database
+### Frontend (quad-web)
+- **Framework:** Next.js 15.5 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **Auth:** NextAuth.js (OAuth 2.0)
+- **State:** React Context
 
-**Purpose:** Database schema, migrations, and SQL files
+### Backend (quad-services)
+- **Framework:** Spring Boot 3.2.1
+- **Language:** Java 17
+- **ORM:** JPA/Hibernate
+- **Build:** Maven 3.9+
+- **Auth:** JWT + BCrypt
 
-```
-quadframework-database/
-├── prisma/
-│   ├── schema.prisma             # Full Prisma schema
-│   ├── migrations/               # Migration history
-│   └── sql/
-│       ├── tables/               # Modular table definitions
-│       ├── functions/            # PostgreSQL functions
-│       ├── triggers/             # Triggers
-│       └── views/                # Database views
-├── scripts/
-│   ├── db-push.sh                # Push schema to database
-│   ├── db-seed.sh                # Seed data
-│   └── db-reset.sh               # Reset database
-└── package.json
-```
+### Database (quad-database)
+- **Database:** PostgreSQL 15
+- **Schema:** Raw SQL files (source of truth)
+- **Migrations:** SQL-based migrations
 
-### quadframework-services
-
-**Purpose:** Reusable business logic shared by web app AND VS Code extension
-
-```
-quadframework-services/
-├── src/
-│   ├── index.ts                  # Main exports
-│   ├── ai/                       # AI provider routing
-│   ├── memory/                   # Memory system
-│   ├── codebase/                 # Code indexing
-│   ├── documentation/            # Doc generation
-│   ├── tickets/                  # Ticket operations
-│   └── agents/                   # Agent system
-└── package.json
-```
-
-### quadframework-web
-
-**Purpose:** Next.js web application (marketing + dashboard)
-
-```
-quadframework-web/
-├── src/
-│   ├── app/                      # Next.js pages + API routes
-│   │   ├── api/                  # REST API endpoints
-│   │   └── (pages)/              # Web pages
-│   ├── components/               # React components
-│   └── lib/                      # Utilities
-└── package.json
-```
-
-### quad-ios
-
-**Purpose:** Native iOS app for QUAD dashboard access
-
-```
-quad-ios/
-├── QUAD/
-│   ├── Views/                    # SwiftUI views
-│   ├── ViewModels/               # MVVM ViewModels
-│   └── Services/                 # API client
-└── QUAD.xcodeproj
-```
-
-### quad-android
-
-**Purpose:** Native Android app for QUAD dashboard access
-
-```
-quad-android/
-├── app/
-│   ├── src/main/java/com/quad/
-│   │   ├── ui/                   # Jetpack Compose screens
-│   │   ├── viewmodel/            # MVVM ViewModels
-│   │   └── data/                 # API + Repository
-│   └── build.gradle.kts
-└── build.gradle.kts
-```
-
-### quad-vscode
-
-**Purpose:** VS Code extension for IDE integration
-
-```
-quad-vscode/
-├── src/
-│   ├── extension.ts              # Entry point
-│   ├── commands/                 # VS Code commands
-│   ├── providers/                # Completion, hover, etc.
-│   └── views/                    # Webview panels
-└── package.json
-```
+### Infrastructure
+- **Containers:** Docker + Docker Compose
+- **Reverse Proxy:** Caddy 2 (automatic SSL)
+- **Secrets:** Vaultwarden (self-hosted Bitwarden)
+- **DEV/QA:** Mac Studio (local Docker)
+- **PROD:** GCP Cloud Run
 
 ---
 
-## Architecture Flow
+## 🌐 Environments
+
+### DEV (Development)
+
+| Service | Container | Port | URL |
+|---------|-----------|------|-----|
+| Web | `quadframework-web-dev` | 14001 | https://dev.quadframe.work |
+| Java API | `quad-services-dev` | 14101 | http://quad-services-dev:8080 |
+| API Gateway | `quad-api-dev` | 14301 | https://dev-api.quadframe.work |
+| Database | `postgres-quad-dev` | 14201 | localhost:14201 |
+
+### QA (Quality Assurance)
+
+| Service | Container | Port | URL |
+|---------|-----------|------|-----|
+| Web | `quadframework-web-qa` | 15001 | https://qa.quadframe.work |
+| Java API | `quad-services-qa` | 15101 | http://quad-services-qa:8080 |
+| API Gateway | `quad-api-qa` | 15301 | https://qa-api.quadframe.work |
+| Database | `postgres-quad-qa` | 15201 | localhost:15201 |
+
+### PROD (Production)
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| Web | GCP Cloud Run | https://quadframe.work |
+| API Gateway | GCP Cloud Run | https://api.quadframe.work |
+| Database | GCP Cloud SQL | Private IP |
+
+---
+
+## 📖 Documentation
+
+### Essential Reading
+
+| Document | Purpose | When to Read |
+|----------|---------|--------------|
+| [CLAUDE.md](CLAUDE.md) | Complete project guide | Before any work |
+| [.claude/rules/AGENT_RULES.md](.claude/rules/AGENT_RULES.md) | 11 development rules | Before coding |
+| [deployment/README.md](quad-web/deployment/README.md) | Deployment guide | Before deploying |
+
+### Deep Dive Documentation
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        QUAD Architecture                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐             │
-│   │   quad-ios   │    │quad-android  │    │  quad-vscode │             │
-│   │   (Swift)    │    │  (Kotlin)    │    │     (TS)     │             │
-│   └──────┬───────┘    └──────┬───────┘    └──────┬───────┘             │
-│          │                   │                   │                      │
-│          │ REST API          │ REST API          │ REST API            │
-│          │                   │                   │                      │
-│          └───────────────────┼───────────────────┘                      │
-│                              │                                          │
-│                    ┌─────────▼─────────┐                                │
-│                    │  quadframework-web│                                │
-│                    │   (Next.js API)   │ ← API Routes                   │
-│                    └─────────┬─────────┘                                │
-│                              │                                          │
-│                    ┌─────────▼─────────┐                                │
-│                    │quadframework-svcs │                                │
-│                    │ (Business Logic)  │ ← Uses Prisma Client           │
-│                    └─────────┬─────────┘                                │
-│                              │                                          │
-│                    ┌─────────▼─────────┐                                │
-│                    │quadframework-db   │                                │
-│                    │     (Prisma)      │ ← Schema & Migrations          │
-│                    └───────────────────┘                                │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+documentation/
+├── architecture/
+│   ├── OVERVIEW.md              # System architecture
+│   ├── MICROSERVICES.md         # Service breakdown
+│   └── API_GATEWAY.md           # API gateway design
+├── database/
+│   ├── SCHEMA.md                # Database schema
+│   ├── MIGRATIONS.md            # Migration guide
+│   └── QUAD_TABLES.md           # QUAD_ prefix tables
+├── api/
+│   ├── REST_API.md              # REST API reference
+│   ├── OAUTH.md                 # OAuth flow
+│   └── WEBSOCKETS.md            # WebSocket API
+├── deployment/
+│   ├── DOCKER.md                # Docker setup
+│   ├── CADDY.md                 # Caddy configuration
+│   └── GCP.md                   # GCP deployment
+├── guides/
+│   ├── DEVELOPER_ONBOARDING.md  # New developer guide
+│   ├── OAUTH_SETUP.md           # OAuth configuration
+│   └── TROUBLESHOOTING.md       # Common issues
+└── README.md                    # Documentation index
 ```
 
-**Key Point:** Mobile apps (iOS/Android) do NOT include Prisma. They consume REST APIs.
+### Quick Links
+
+- **Architecture:** [documentation/architecture/OVERVIEW.md](documentation/architecture/OVERVIEW.md)
+- **Database:** [documentation/database/SCHEMA.md](documentation/database/SCHEMA.md)
+- **API Reference:** [documentation/api/REST_API.md](documentation/api/REST_API.md)
+- **Sitemap:** [documentation/SITEMAP.md](documentation/SITEMAP.md)
 
 ---
 
-## Tech Stack
+## 🤝 Contributing
 
-| Component | Technology |
-|-----------|------------|
-| **Web Framework** | Next.js 15 with App Router |
-| **Styling** | Tailwind CSS |
-| **Language** | TypeScript |
-| **Database** | PostgreSQL with Prisma ORM |
-| **iOS** | SwiftUI (iOS 16+) |
-| **Android** | Kotlin + Jetpack Compose |
-| **VS Code** | TypeScript Extension API |
-| **Deployment** | Docker + nginx (static export) |
+### Git Workflow
 
----
+1. **Clone with submodules:**
+   ```bash
+   git clone --recurse-submodules git@github.com:a2Vibes/QUAD.git
+   ```
 
-## Development
+2. **Create feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
 
-```bash
-# Install dependencies
-npm install
+3. **Make changes, commit, push:**
+   ```bash
+   git add .
+   git commit -m "feat: Your feature description"
+   git push origin feature/your-feature-name
+   ```
 
-# Run development server
-npm run dev
-# Open http://localhost:3003
+4. **Create pull request** on GitHub
 
-# Build for production
-npm run build
-```
+### Branch Strategy
 
----
+| Branch | Purpose | Protection |
+|--------|---------|------------|
+| `main` | Stable production code | ✅ Protected |
+| `sumanMain` | Suman's working branch | ⚠️ Push freely |
+| `SharuMain` | Sharath's working branch | ⚠️ Push freely |
 
-## Deployment
-
-```bash
-# Deploy to DEV (dev.quadframe.work) - Mac Studio
-./deploy-studio.sh dev
-
-# Deploy to QA (qa.quadframe.work) - Mac Studio
-./deploy-studio.sh qa
-
-# Deploy to PROD (quadframe.work) - GCP Cloud Run
-./deploy-gcp.sh
-
-# Deploy to both DEV and QA
-./deploy-studio.sh all
-```
+**Never push directly to `main`** - always use pull requests.
 
 ---
 
-## Project Structure (Current - Before Submodule Migration)
+## 📝 License
 
-```
-quadframework/
-├── prisma/                   # Database schema (will become quadframework-database)
-│   ├── schema.prisma
-│   └── sql/
-├── src/
-│   ├── app/                  # Next.js pages + API (will become quadframework-web)
-│   │   ├── api/              # REST API endpoints
-│   │   └── (pages)/          # Marketing + dashboard pages
-│   ├── components/           # React components
-│   └── lib/
-│       └── services/         # Business logic (will become quadframework-services)
-├── quad-vscode-plugin/       # VS Code extension (will become quad-vscode)
-├── documentation/            # Stays in parent repo
-├── Dockerfile
-├── deploy-studio.sh
-└── package.json
-```
-
----
-
-## DNS Configuration (Cloudflare)
-
-| Type | Name | Content | Purpose |
-|------|------|---------|---------|
-| A | `@` | Mac Studio IP | quadframe.work |
-| A | `dev` | Mac Studio IP | dev.quadframe.work |
-| A | `qa` | Mac Studio IP | qa.quadframe.work |
-
----
-
-## Related Documentation
-
-- [QUAD_SUBMODULES.md](documentation/architecture/QUAD_SUBMODULES.md) - Detailed submodule architecture
-- [QUAD_SERVICES_SPEC.md](documentation/architecture/QUAD_SERVICES_SPEC.md) - Services package specification
-- [DISCUSSIONS_LOG.md](documentation/internal/DISCUSSIONS_LOG.md) - Development discussions archive
-
----
-
-## License
-
-Copyright 2025 A2 Vibe Creators LLC. All rights reserved.
+Copyright 2026 A2 Vibe Creators LLC. All rights reserved.
 
 QUAD™ is a trademark of A2 Vibe Creators LLC.
+
+---
+
+## 🎉 You're All Set!
+
+**Next Steps:**
+1. Run `./deployment/scripts/setup.sh` (interactive setup)
+2. Access https://dev.quadframe.work
+3. Read [CLAUDE.md](CLAUDE.md) (project rules)
+4. Join #quad-dev on Slack
+
+**Happy coding, macha! 🚀**

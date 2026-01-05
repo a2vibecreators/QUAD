@@ -1,0 +1,80 @@
+# ============================================================================
+# QUAD Framework - DEV Environment Caddy Configuration
+# ============================================================================
+# This file should be copied/merged into: /Users/semostudio/docker/caddy/Caddyfile
+#
+# Setup:
+#   1. Copy this file: cp deployment/caddy/Caddyfile.dev /Users/semostudio/docker/caddy/Caddyfile
+#   2. Or append to existing: cat deployment/caddy/Caddyfile.dev >> /Users/semostudio/docker/caddy/Caddyfile
+#   3. Restart Caddy: docker restart caddy
+#
+# DNS:
+#   - dev.quadframe.work → 96.240.97.243 (Mac Studio IP)
+#   - dev-api.quadframe.work → 96.240.97.243 (Mac Studio IP)
+#
+# ============================================================================
+
+# QUAD Web UI (Next.js Frontend)
+dev.quadframe.work {
+    reverse_proxy quadframework-web-dev:3000
+
+    # Enable compression
+    encode gzip zstd
+
+    # Add security headers
+    header {
+        # Enable HSTS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/dev-quadframe-access.log
+        format json
+    }
+}
+
+# QUAD API Gateway (External Clients - VS Code Extension, Mobile Apps)
+dev-api.quadframe.work {
+    reverse_proxy quad-api-dev:3100
+
+    # Enable compression
+    encode gzip zstd
+
+    # CORS headers for API
+    header {
+        # CORS
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With, X-API-Key"
+        Access-Control-Max-Age "86400"
+
+        # Security headers
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+    }
+
+    # Handle preflight requests
+    @options {
+        method OPTIONS
+    }
+    respond @options 204
+
+    # Logging
+    log {
+        output file /var/log/caddy/dev-api-access.log
+        format json
+    }
+}

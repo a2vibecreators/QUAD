@@ -10,8 +10,9 @@ This file provides guidance to Claude Code when working with the QUAD Framework 
 - Next.js 15.5 (App Router)
 - TypeScript
 - Tailwind CSS
-- Prisma ORM with PostgreSQL
-- NextAuth.js for authentication
+- **Database:** PostgreSQL with SQL + JPA (NOT Prisma - migrated Jan 2026)
+- **Backend:** Java Spring Boot 3.2.1 (quad-services)
+- NextAuth.js for OAuth authentication
 - Deployed on Mac Studio (Docker) + GCP Cloud Run
 
 **Live URLs:**
@@ -673,23 +674,29 @@ https://dev.quadframe.work/auth/login
 
 **Connection String (.env):**
 ```bash
-# DEV
+# DEV (Java backend uses JPA, not Prisma)
 DATABASE_URL="postgresql://quad_user:quad_dev_pass@localhost:14201/quad_dev_db?schema=public"
 
 # QA
 DATABASE_URL="postgresql://quad_user:quad_qa_pass@localhost:15201/quad_qa_db?schema=public"
 ```
 
-**Prisma Commands:**
+**Architecture (Migrated Jan 2026):**
+- **Schema:** Raw SQL files in `quad-database/sql/` (source of truth)
+- **Backend:** Java Spring Boot + JPA (quad-services/)
+- **Frontend:** Next.js calls Java backend via HTTP (java-backend.ts)
+- **Legacy:** ⚠️ Some API routes still use old Prisma-based auth.ts (being migrated)
+
+**Database Commands:**
 ```bash
-# Generate Prisma client
-npx prisma generate
+# View schema SQL files
+ls quad-database/sql/tables/
 
-# Push schema to database (creates tables)
-npx prisma db push
+# Deploy schema to database
+cd quad-database && ./deployment/dev/dev-deploy.sh
 
-# View database in browser
-npx prisma studio
+# Check sync status
+cd quad-database && ./sync/sync-db.sh dev
 ```
 
 **Schema Tables (15 tables with QUAD_ prefix):**
