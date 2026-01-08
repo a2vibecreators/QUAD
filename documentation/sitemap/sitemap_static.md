@@ -56,6 +56,41 @@ HOME (/)
 │   ├── /blueprint-agent ─── Blueprint Agent Feature
 │   └── /onboarding ──────── Team Onboarding Guide
 │
+├── CUSTOMER (Customer/Prospect Pages)
+│   │   For enterprise prospects and founding partners
+│   │
+│   ├── /customer/pitch ────────── Customer Pitch Slides (Founding Partner Program)
+│   │   ├── Slide 1: Title & Problem (6-9 weeks problem)
+│   │   ├── Slide 2: Comparison (Traditional vs QUAD vs AI Tools)
+│   │   ├── Slide 3: Meeting → Code Flow (Q-U-A-D timeline)
+│   │   ├── Slide 4: Processing Modes (Real-time vs Batch)
+│   │   ├── Slide 5: AI Agents (14 specialized agents)
+│   │   ├── Slide 6: Role-Based Dashboards (7 dashboard types)
+│   │   ├── Slide 7: Proprietary Technology (12 QUAD technologies)
+│   │   ├── Slide 8: Security & BYOK
+│   │   ├── Slide 9: Measurable Impact (ROI metrics)
+│   │   ├── Slide 10: Features Roadmap (150+ features across 3 phases)
+│   │   ├── Slide 11: Founding Customer Program
+│   │   └── Slide 12: Contact & Call-to-Action
+│   │
+│   ├── /customer/roi ────────────── ROI Calculator
+│   │   └── Interactive sliders for customized ROI calculation
+│   │
+│   ├── /customer/features ──────── Complete Features List (150+ total)
+│   │   ├── Phase 1 (LIVE)
+│   │   ├── Phase 2 (Q2 2026)
+│   │   └── Phase 3 (Q4 2026)
+│   │
+│   ├── /customer/demo ──────────── Interactive Dashboard Demo
+│   │   └── Live demo of QUAD Platform dashboard
+│   │
+│   ├── /customer/about ────────── About QUAD Platform
+│   │
+│   ├── /customer/contact ─────── Contact & Schedule Demo
+│   │   └── Email, calendar booking, team intro form
+│   │
+│   └── /customer/settings ────── Account Settings (Customer Portal)
+│
 ├── MASSMUTUAL (Partner Pitch Site)
 │   │   Subdomain: massmutual.quadframe.work
 │   │   Middleware rewrites to /massmutual/* routes
