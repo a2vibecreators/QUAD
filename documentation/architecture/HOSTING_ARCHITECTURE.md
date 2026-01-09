@@ -12,11 +12,16 @@ Based on discussion: QUAD Platform supports three deployment models to serve dif
 ┌─────────────────────────────────────────────────────────────┐
 │                    QUAD Product Lineup                      │
 ├─────────────────────────────────────────────────────────────┤
-│ 1. quadframe.work       → Static documentation (FREE)       │
-│ 2. user.quadframe.work  → Internet SaaS (PAID)             │
-│ 3. customer.quadframe.work → Enterprise Intranet (PAID)    │
+│ 1. quadframe.work           → Static documentation (FREE)   │
+│ 2. user.quadframe.work      → Internet SaaS (PAID)         │
+│ 3. customer.quadframe.work  → Enterprise Intranet (PAID)   │
+│                                                              │
+│ OLD (Demo - Keep As-Is):                                     │
+│ - customerdemo.quadframe.work → Demo version (v1.0)        │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Note:** `customerdemo.quadframe.work` is the OLD demo version (v1.0). Keep it running for reference, but `customer.quadframe.work` is the NEW real enterprise product (v2.0).
 
 ---
 
