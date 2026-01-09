@@ -36,6 +36,27 @@ QUAD is **two products**:
 
 ---
 
+## 📜 Patent Notice
+
+**QUAD Platform is Patent Pending**
+
+[![Patent Pending](https://img.shields.io/badge/Patent-Pending-blue?style=for-the-badge)](documentation/patent/)
+
+- **U.S. Provisional Patent Application No. 63/956,810**
+- **Filing Date:** January 9, 2026
+- **Status:** Patent Pending (12-month protection)
+
+**Protected Innovations:**
+- ✅ Pre-generation compliance enforcement for AI code generation
+- ✅ Meta-AI architecture with restricted context (zero hallucination)
+- ✅ Progressive enforcement levels (alpha/beta/production)
+- ✅ Multi-agent cost-optimized code generation
+- ✅ QUAD Language domain-specific programming language
+
+**Full patent documentation:** [documentation/patent/](documentation/patent/)
+
+---
+
 ## 🏗️ Architecture Overview
 
 ```

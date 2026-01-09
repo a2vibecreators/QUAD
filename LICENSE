@@ -15,7 +15,20 @@ EXCEPTIONS:
 - Personal evaluation only (with written permission)
 - Commercial licenses available: contact sales@quadframe.work
 
-Patent Pending: USPTO Application No. [TO BE FILED]
+PATENT NOTICE:
+QUAD Platform is protected by U.S. Provisional Patent Application No. 63/956,810
+Filing Date: January 9, 2026
+Status: Patent Pending
+
+This patent covers the following innovations:
+- Pre-generation compliance enforcement for AI code generation
+- Meta-AI architecture with restricted context (zero hallucination)
+- Progressive enforcement levels (alpha/beta/production)
+- Multi-agent cost-optimized code generation
+- QUAD Language domain-specific programming language
+
+Unauthorized use, reproduction, or implementation of the patented
+inventions may result in patent infringement liability.
 
 Unauthorized use, reproduction, or distribution will result in legal action.
 
