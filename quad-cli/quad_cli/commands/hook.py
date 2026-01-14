@@ -85,8 +85,36 @@ def log_request(user_prompt: str, enhanced_prompt: str, command: str = None, pha
         f.write(json.dumps(log_entry) + "\n")
 
 
-def load_config():
-    """Load config from ~/.quad/config.json if exists"""
+def find_project_quad_dir() -> Path:
+    """Find .quad/ folder by walking up from current directory"""
+    cwd = Path.cwd()
+    for parent in [cwd] + list(cwd.parents):
+        quad_dir = parent / ".quad"
+        if quad_dir.exists() and (quad_dir / "config.json").exists():
+            return quad_dir
+        # Stop at home directory
+        if parent == Path.home():
+            break
+    return None
+
+
+def load_project_config() -> dict:
+    """Load project-level config from .quad/config.json"""
+    project_quad_dir = find_project_quad_dir()
+    if project_quad_dir:
+        config_path = project_quad_dir / "config.json"
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+                config['_project_quad_dir'] = str(project_quad_dir)
+                return config
+        except Exception:
+            pass
+    return {}
+
+
+def load_global_config() -> dict:
+    """Load global config from ~/.quad/config.json"""
     config_path = Path.home() / ".quad" / "config.json"
     if config_path.exists():
         try:
@@ -95,6 +123,50 @@ def load_config():
         except Exception:
             pass
     return {}
+
+
+def load_config():
+    """Load config - project-level takes precedence over global"""
+    # Try project-level first
+    project_config = load_project_config()
+    if project_config:
+        return project_config
+
+    # Fall back to global
+    return load_global_config()
+
+
+def load_project_context() -> str:
+    """Load project context from .quad/context/ folder"""
+    project_quad_dir = find_project_quad_dir()
+    if not project_quad_dir:
+        return ""
+
+    context_dir = project_quad_dir / "context"
+    if not context_dir.exists():
+        return ""
+
+    context_parts = []
+
+    # Load CLAUDE.md if exists
+    claude_md = context_dir / "CLAUDE.md"
+    if claude_md.exists():
+        try:
+            content = claude_md.read_text()
+            context_parts.append(f"<project-context>\n{content}\n</project-context>")
+        except Exception:
+            pass
+
+    # Load any other .md files in context folder
+    for md_file in context_dir.glob("*.md"):
+        if md_file.name != "CLAUDE.md":
+            try:
+                content = md_file.read_text()
+                context_parts.append(f"<context file=\"{md_file.name}\">\n{content}\n</context>")
+            except Exception:
+                pass
+
+    return "\n\n".join(context_parts)
 
 
 def get_context(question: str, domain_slug: str = None) -> dict:

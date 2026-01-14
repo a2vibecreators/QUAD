@@ -40,10 +40,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Config paths
-QUAD_CONFIG_DIR = Path.home() / ".quad"
-QUAD_CONFIG_FILE = QUAD_CONFIG_DIR / "config.json"
-QUAD_DRAFTS_DIR = QUAD_CONFIG_DIR / "drafts"
+# Global config paths (CLI installation)
+QUAD_GLOBAL_DIR = Path.home() / ".quad"
+QUAD_GLOBAL_CONFIG = QUAD_GLOBAL_DIR / "config.json"
+QUAD_DRAFTS_DIR = QUAD_GLOBAL_DIR / "drafts"
+
+# Project-level config paths (created by quad init)
+PROJECT_QUAD_DIR = Path.cwd() / ".quad"
+PROJECT_CONFIG_FILE = PROJECT_QUAD_DIR / "config.json"
+PROJECT_CONTEXT_DIR = PROJECT_QUAD_DIR / "context"
 
 # Database config
 DB_CONFIG = {
@@ -276,6 +281,13 @@ class QuadInit:
             Console.success("Projects initialized!")
         else:
             Console.info("Skipped database save")
+
+        # Step 7: Create project-level .quad/ folder
+        if self.projects:
+            project = self.projects[0]  # Use first project
+            org_code = self.org_data.get('org_code', 'unknown')
+            domain_slug = project['name'].lower().replace(' ', '-')[:20]
+            create_project_quad_folder(org_code, domain_slug, project['name'])
 
         # Show summary
         self._show_summary(plan)
@@ -563,20 +575,95 @@ class QuadInit:
 # Config Management
 # ─────────────────────────────────────────────────────────────
 
-def load_config() -> Optional[Dict]:
-    """Load existing QUAD config"""
-    if QUAD_CONFIG_FILE.exists():
+def load_global_config() -> Optional[Dict]:
+    """Load global QUAD config (CLI settings, auth)"""
+    if QUAD_GLOBAL_CONFIG.exists():
         try:
-            return json.loads(QUAD_CONFIG_FILE.read_text())
+            return json.loads(QUAD_GLOBAL_CONFIG.read_text())
         except:
             return None
     return None
 
 
-def save_config(config: Dict):
-    """Save QUAD config"""
-    QUAD_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    QUAD_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+def save_global_config(config: Dict):
+    """Save global QUAD config"""
+    QUAD_GLOBAL_DIR.mkdir(parents=True, exist_ok=True)
+    QUAD_GLOBAL_CONFIG.write_text(json.dumps(config, indent=2))
+
+
+def load_project_config() -> Optional[Dict]:
+    """Load project-level QUAD config (from current directory .quad/)"""
+    if PROJECT_CONFIG_FILE.exists():
+        try:
+            return json.loads(PROJECT_CONFIG_FILE.read_text())
+        except:
+            return None
+    return None
+
+
+def save_project_config(config: Dict):
+    """Save project-level QUAD config to .quad/ in current directory"""
+    PROJECT_QUAD_DIR.mkdir(parents=True, exist_ok=True)
+    PROJECT_CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
+    PROJECT_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    Console.success(f"Project config saved: {PROJECT_CONFIG_FILE}")
+
+
+def create_project_quad_folder(org_code: str, domain_slug: str, project_name: str):
+    """Create .quad/ folder in current project directory"""
+    PROJECT_QUAD_DIR.mkdir(parents=True, exist_ok=True)
+    PROJECT_CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Create project config
+    config = {
+        "org_code": org_code,
+        "domain_slug": domain_slug,
+        "project_name": project_name,
+        "created_at": datetime.now().isoformat(),
+        "api_url": os.getenv("QUAD_API_URL", "https://api.quadframe.work")
+    }
+    PROJECT_CONFIG_FILE.write_text(json.dumps(config, indent=2))
+
+    # Create .gitignore for .quad folder
+    gitignore_path = PROJECT_QUAD_DIR / ".gitignore"
+    gitignore_content = """# QUAD local files (not committed)
+*.log
+drafts/
+cache/
+
+# Keep config and context
+!config.json
+!context/
+"""
+    gitignore_path.write_text(gitignore_content)
+
+    # Create placeholder CLAUDE.md in context folder
+    claude_md_path = PROJECT_CONTEXT_DIR / "CLAUDE.md"
+    claude_md_content = f"""# {project_name} - QUAD Context
+
+**Organization:** {org_code}
+**Domain:** {domain_slug}
+**Generated:** {datetime.now().strftime('%Y-%m-%d')}
+
+---
+
+## Project Overview
+
+This context file is automatically managed by QUAD.
+Add project-specific instructions below.
+
+---
+
+## Custom Instructions
+
+<!-- Add your project-specific instructions here -->
+
+"""
+    claude_md_path.write_text(claude_md_content)
+
+    Console.success(f"Created .quad/ folder in {Path.cwd()}")
+    Console.info(f"  - {PROJECT_CONFIG_FILE}")
+    Console.info(f"  - {PROJECT_CONTEXT_DIR}/CLAUDE.md")
 
 
 def load_draft(name: str) -> Optional[Dict]:
@@ -626,7 +713,7 @@ class QuadInteractiveInit:
         self.projects = []
 
         # Load existing config if available
-        self.config = load_config()
+        self.config = load_global_config()
 
         # Load draft if resuming
         if resume_draft:
@@ -689,7 +776,7 @@ class QuadInteractiveInit:
         """Show existing QUAD config"""
         Console.header("Existing Configuration Found")
         print(f"  Organization: {self.config.get('org_name', 'Unknown')}")
-        print(f"  Config file: {QUAD_CONFIG_FILE}")
+        print(f"  Config file: {QUAD_GLOBAL_CONFIG}")
 
         if Console.confirm("\n  Use existing organization?"):
             self.org_data = self.config
@@ -806,6 +893,13 @@ class QuadInteractiveInit:
     def _finalize(self):
         """Finalize - suggest Excel or save to DB"""
         Console.header("Finalization")
+
+        # Always create project-level .quad/ folder
+        if self.projects:
+            project = self.projects[0]
+            org_code = self.org_data.get('org_code', 'unknown')
+            domain_slug = project['name'].lower().replace(' ', '-')[:20]
+            create_project_quad_folder(org_code, domain_slug, project['name'])
 
         # Option 1: Generate Excel template with filled data
         if HAS_OPENPYXL:

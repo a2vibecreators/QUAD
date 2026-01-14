@@ -453,10 +453,10 @@ Jul         Aug         Sep         Oct         Nov         Dec
 
 ## Related Documents
 
-- [QUAD Agent Architecture](QUAD-AGENT-ARCHITECTURE.md)
-- [QUAD Agent Protocol](QUAD-AGENT-PROTOCOL.md)
-- [POC Plan](POC-JAN13-PLAN.md)
-- [Next Steps](NEXT-STEPS.md)
+- [QUAD Agent Architecture](documentation/agents/QUAD-AGENT-ARCHITECTURE.md)
+- [QUAD Agent Protocol](documentation/agents/QUAD-AGENT-PROTOCOL.md)
+- [POC Plan](documentation/planning/POC-JAN13-PLAN.md)
+- [Development Roadmap](documentation/planning/DEVELOPMENT-ROADMAP.md)
 
 ---
 
