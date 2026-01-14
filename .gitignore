@@ -49,6 +49,9 @@ credentials/
 # Misc
 *.log
 
+# Claude session history (may contain secrets)
+.claude/rules/SESSION_HISTORY.md
+
 /src/generated/prisma
 
 # Deprecated - quad-services-ts replaced by quad-services (Java)

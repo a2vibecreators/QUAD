@@ -112,10 +112,10 @@
    - Organization and collection IDs reference
 
 **Current Production Secrets (in GCP, to be migrated):**
-- NEXTAUTH_SECRET: `41hKCOZcnWggq2cG9oBietUYljvN0ZkUqjyFnKdgTEM=`
-- GOOGLE_CLIENT_ID: `805817782076-b6975p184nj0kqcs9l0hurjj2bv6gkev.apps.googleusercontent.com`
-- GOOGLE_CLIENT_SECRET: `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`
-- DATABASE_URL: `postgresql://quad_user:N5AgXNEMzokeopVjrJyKQ9rB8a2@34.148.105.158:5432/quad_prod_db`
+- NEXTAUTH_SECRET: [REDACTED - stored in Vaultwarden]
+- GOOGLE_CLIENT_ID: [REDACTED - stored in Vaultwarden]
+- GOOGLE_CLIENT_SECRET: [REDACTED - stored in Vaultwarden]
+- DATABASE_URL: [REDACTED - stored in Vaultwarden]
 
 **Prerequisites for User:**
 1. ✅ QUAD organization exists in Vaultwarden (done)
