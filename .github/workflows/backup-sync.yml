@@ -2,9 +2,13 @@ name: Daily Backup Sync
 
 on:
   schedule:
-    # Runs daily at midnight UTC
-    - cron: '0 0 * * *'
+    # Runs daily at 6am UTC (1am EST)
+    - cron: '0 6 * * *'
   workflow_dispatch:  # Allow manual trigger
+  push:
+    branches:
+      - main
+      - v2.0.0-suma-api
 
 jobs:
   sync-to-backup:
@@ -14,9 +18,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
 
-      - name: Push to a2vibecreators backup branch
+      - name: Sync to a2vibecreators backup
         run: |
           git config --unset-all http.https://github.com/.extraheader || true
-          git remote add backup https://x-access-token:${{ secrets.BACKUP_PAT }}@github.com/a2vibecreators/QUAD.git
-          git push backup main:backup --force
+          git remote add backup https://x-access-token:${{ secrets.BACKUP_PAT }}@github.com/a2vibecreators/QUAD.git || true
+
+          # Push current branch to backup org (same branch name)
+          git push backup ${{ github.ref_name }}:${{ github.ref_name }} --force
+
+          echo "✅ Synced ${{ github.ref_name }} to a2vibecreators/QUAD"

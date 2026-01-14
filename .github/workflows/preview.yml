@@ -20,6 +20,9 @@ name: Preview Environment
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed, labeled]
+    branches:
+      - main
+      - v2.0.0-suma-api
 
 env:
   GCP_REGION: us-east1
