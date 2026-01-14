@@ -163,9 +163,28 @@ def process_command(prompt: str) -> str:
         result = get_context("Who has availability?", domain)
 
     elif command == "quad-cleanup":
-        # Read current project context if exists
+        # Get project name from args or detect from .quad/
+        project_name = args.strip() if args else None
         project_context = ""
-        quad_dir = Path.cwd() / ".quad"
+        save_path = ""
+
+        # Find project directory
+        if project_name:
+            # Look in quad-projects folder
+            quad_projects = Path.cwd() / "QUAD" / "quad-projects" / project_name
+            if not quad_projects.exists():
+                quad_projects = Path.cwd() / "quad-projects" / project_name
+            if quad_projects.exists():
+                quad_dir = quad_projects / ".quad"
+                save_path = f"QUAD/quad-projects/{project_name}/.quad/session-summary.md"
+            else:
+                return f"Error: Project '{project_name}' not found in quad-projects/"
+        else:
+            # Check current directory for .quad/
+            quad_dir = Path.cwd() / ".quad"
+            save_path = ".quad/session-summary.md"
+
+        # Read project.json if exists
         if quad_dir.exists():
             project_file = quad_dir / "project.json"
             if project_file.exists():
@@ -176,19 +195,21 @@ def process_command(prompt: str) -> str:
                     pass
 
         return f"""[QUAD Cleanup Request]
+Project: {project_name or 'current directory'}
+Save to: {save_path}
 
 {project_context}
 Please help me clean up this conversation session:
 
 1. **Summarize** the key decisions and outcomes from our conversation
-2. **Save** the summary to `.quad/session-summary.md` with:
+2. **Save** the summary to `{save_path}` with:
    - Decisions made
    - Current project state
    - Pending tasks
    - Important context to preserve
 3. **Tell me** to run `/compact` to reduce context size
 
-After saving the summary, future sessions will read `.quad/session-summary.md`
+After saving, future sessions working on this project will read the summary
 to restore context without the full conversation history.
 
 [End QUAD Cleanup Request]"""
@@ -200,11 +221,17 @@ to restore context without the full conversation history.
   quad-story                - Create user stories
   quad-ticket               - Create development tickets
   quad-write                - Generate code
-  quad-cleanup              - Summarize session & reduce context
+  quad-cleanup [project]    - Summarize session for project
   quad-question <question>  - Ask with org context
   quad-team                 - Show team members
   quad-status               - Show project status
   quad-availability         - Show availability
+  quad-stats                - Show token usage stats
+
+Context Files:
+  CLAUDE.md                 - Repo-level rules (auto-loaded)
+  .quad/project.json        - Project configuration
+  .quad/session-summary.md  - Previous session context
 
 Configuration:
   Set QUAD_API_URL, QUAD_API_KEY, QUAD_DOMAIN env vars
